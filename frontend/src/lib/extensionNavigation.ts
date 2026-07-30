@@ -22,7 +22,3 @@ export function formatExtensionRoute(pathname: string, search: string): string {
   }
   return `${pathname}${search}`;
 }
-
-export async function syncPanelRoute(route: string): Promise<void> {
-  await chrome.storage.session.set({ panelRoute: route });
-}

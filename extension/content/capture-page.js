@@ -6,7 +6,3 @@ function captureJobPage() {
     pageTitle: document.title || "",
   };
 }
-
-function analyzeCurrentPage() {
-  return detectJobPage();
-}

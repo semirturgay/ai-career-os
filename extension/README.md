@@ -2,16 +2,16 @@
 
 Capture job text from the page you are viewing and send it into the **parse → review → save → match** pipeline.
 
-**Principles:** [docs/extension.md](../docs/extension.md) — DOM-only capture, never fetch third-party URLs, user-initiated, auto-detect job pages.
+**Principles:** [docs/extension.md](../docs/extension.md) — DOM-only capture, never fetch third-party URLs, user-initiated.
 
 ## What it does
 
 1. You open any page that shows a job posting.
-2. The extension **auto-detects** if the page looks like a job post (URL + DOM — no network fetch).
-3. Click **Capture & review** in the side panel → DOM text → `POST /jobs/parse-text` → handoff → review in panel.
+2. Open the side panel and click **Capture job from this tab**.
+3. DOM text → `POST /jobs/parse-text` → handoff → review in panel.
 4. You confirm fields and **Save & analyze match** in the embedded React app.
 
-We do not integrate with third-party job sites. We only read text already rendered in your active tab.
+We do not integrate with third-party job sites. We only read text already rendered in your active tab when you click capture.
 
 ## Build & load (development)
 
@@ -37,22 +37,18 @@ After updating extension JS or rebuilding the UI, click **Reload** on `chrome://
 | **Side panel** | Bundled React app — capture bar, pipeline, review, match, settings |
 | **Options** | API base URL |
 
-Capture runs **in the side panel** (`Capture & review` on the active browser tab). The popup is not used by default.
-
 ## Capture (DOM only)
 
 | Step | Behavior |
 |------|----------|
 | Read | `executeScript` on the active tab — visible text from the page |
-| Detect | URL + DOM heuristics (`detectJobPage`) |
 | Structure | Our API only — `POST /jobs/parse-text` |
 | Review | Side panel handoff — nothing saved until you confirm |
 
 ## API endpoints used (our backend only)
 
-- `GET /health` — popup connectivity check
+- `GET /health` — connectivity check
 - `POST /api/v1/jobs/parse-text`
-- `POST /api/v1/jobs/classify-page` — lightweight LLM check: is this a job post?
 - `POST /api/v1/jobs/intake-handoff`
 - `GET /api/v1/jobs/by-url` (duplicate URL hint)
 

@@ -16,15 +16,11 @@ See also [intake-policy.md](intake-policy.md) (repo-wide).
 
 This extends the repo-wide rule in [vision.md](vision.md): *no job scraping*.
 
-## Job page detection
+## Capture flow
 
-Before capture, the extension **auto-detects** whether the current page looks like a job posting:
+User opens a job posting in the browser, clicks **Capture job from this tab** in the side panel → DOM text → `POST /jobs/parse-text` → handoff → review → save. Nothing is read or saved until the user clicks capture.
 
-- URL hints (paths like `/jobs/`, `/careers/`, etc.)
-- DOM signals (title, company, description length)
-- Page-structure heuristics when the DOM matches common job-post layouts
-
-Detection informs UI copy (“Likely job posting” vs “This page may not be a job”) — it does **not** trigger automatic saves or network requests anywhere except our API.
+**Duplicate protection:** posting URLs are normalized (e.g. LinkedIn job id, tracking params stripped) and matched against saved jobs via `GET /jobs/by-url`. Re-capturing the same URL skips parse/review and opens the existing job; saving on review returns `409` if the URL already exists.
 
 ## Resume intake (extension-first)
 
@@ -37,9 +33,8 @@ Same human-in-the-loop pattern as job intake.
 
 | Layer | Role |
 |-------|------|
-| **Popup** | Quick capture + page detection status |
-| **Side panel** | Full app UI (pipeline, match, research, settings) — bundled React build |
-| **Service worker** | Inject scripts, call **our** API only (`localhost` / configured backend) |
+| **Side panel** | Full app UI (pipeline, match, research) + **Capture job from active tab** CTA |
+| **Service worker** | Inject scripts on user capture, call **our** API only |
 | **Backend** | LLM structure, match, storage — unchanged |
 
 Capture → parse → review → save → match stays one pipeline; the extension replaces “open localhost tab” as the shell.

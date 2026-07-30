@@ -12,6 +12,7 @@ async function apiRequest(apiBaseUrl, path, options = {}) {
   const response = await fetch(`${apiBaseUrl}/api/v1${path}`, {
     ...options,
     headers,
+    signal: options.signal,
   });
 
   if (!response.ok) {
@@ -49,16 +50,23 @@ async function createIntakeHandoff(apiBaseUrl, payload) {
   });
 }
 
-async function findJobByUrl(apiBaseUrl, url) {
-  const params = new URLSearchParams({ url });
-  return apiRequest(apiBaseUrl, `/jobs/by-url?${params.toString()}`);
-}
+async function findJobByUrl(apiBaseUrl, url, timeoutMs = 5000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-async function classifyJobPage(apiBaseUrl, payload) {
-  return apiRequest(apiBaseUrl, "/jobs/classify-page", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  try {
+    const params = new URLSearchParams({ url });
+    return await apiRequest(apiBaseUrl, `/jobs/by-url?${params.toString()}`, {
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error.name === "AbortError") {
+      throw new Error("Job lookup timed out");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 async function checkApiHealth(apiBaseUrl) {

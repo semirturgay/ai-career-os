@@ -54,7 +54,7 @@ Long-term vision: an autonomous career assistant that discovers jobs, explains f
 - **Model picker** — fetches available models from your provider
 - **Human review** — edit extracted fields before saving (resume and job)
 - **Job intake wizard** — paste description → extract → review → save with automatic match
-- **Chrome extension (M7)** — capture job text from whatever page you’re viewing (DOM only); auto-detect job pages; review in app
+- **Chrome extension (M7)** — capture job text from whatever page you're viewing (DOM only); review in app
 - **RAG-backed match** — retrieves relevant resume chunks before full analysis
 - **Job pipeline** — home dashboard ranks jobs by match score with polling
 - **Job detail tabs** — match, company research, resume optimization, cover letter (after full analysis)
@@ -231,8 +231,8 @@ sequenceDiagram
 ```
 
 1. Open a page that shows a job posting (make sure the full description is visible on screen).
-2. Extension popup → **likely job posting** detection (URL + DOM heuristics — no network fetch).
-3. **Capture & review in panel** → opens side panel with extracted fields.
+2. Open the side panel and click **Capture job from this tab**.
+3. Review extracted fields in the panel.
 4. **Save & analyze match** — same human-in-the-loop flow as paste intake.
 
 ### How capture works
@@ -240,9 +240,8 @@ sequenceDiagram
 | Step | What happens |
 |------|----------------|
 | **Read DOM** | Inject script into the active tab; extract visible text (title, company, description when present in the page) |
-| **Detect** | Heuristics on URL + DOM — is this likely a job posting? |
 | **Structure** | Send text to our API → LLM `JobExtraction` |
-| **Review** | Hand off to web app; you confirm before save |
+| **Review** | Hand off to side panel; you confirm before save |
 
 We do **not** integrate with, fetch from, or endorse any third-party site. We only read what is already rendered in your browser.
 
@@ -421,7 +420,7 @@ Full interactive docs: http://127.0.0.1:8000/docs
 | **M4** Resume optimization | Done | Gap-driven suggestions with review before apply |
 | **M5** Cover letter | Done | 3-pass cover letter chain on job detail |
 | **M6** Company research | Done | Bounded agent loop + web search + source-grounded brief |
-| **M7** Chrome extension | **In progress** | DOM-only job capture, auto-detect, extension-first intake |
+| **M7** Chrome extension | **In progress** | DOM-only job capture, extension-first intake |
 | — | Planned | Side panel UI, paste resume, richer DOM heuristics |
 
 Details: [docs/milestones/](docs/milestones/README.md) · Current state: [docs/project-status.md](docs/project-status.md)

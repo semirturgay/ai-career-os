@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { api } from "../api/client";
+import { api, ApiError, duplicateJobFromError } from "../api/client";
 import type { JobExtraction, JobParseResult } from "../types";
 import { extractionMetadata } from "../lib/jobExtraction";
+import { DuplicateJobBanner } from "../components/DuplicateJobBanner";
 import { JobIntakeSteps } from "../components/JobIntakeSteps";
 import { Layout } from "../components/Layout";
 import { PageLoader } from "../components/AiLoadingState";
 import { useProfileRoute } from "../components/RequireProfileLayout";
 import { useEmbeddedMode } from "../hooks/useEmbeddedMode";
+import { normalizeJobUrl, type DuplicateJobInfo } from "../lib/jobUrl";
 import { Badge, Button, ErrorBanner, Field, Input, Textarea } from "../components/ui";
 
 interface JobReviewLocationState {
@@ -45,6 +47,7 @@ export function JobReviewPage() {
   const [showDescription, setShowDescription] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [duplicateJob, setDuplicateJob] = useState<DuplicateJobInfo | null>(null);
 
   useEffect(() => {
     if (stateParsed) {
@@ -103,6 +106,38 @@ export function JobReviewPage() {
     setJobMetadata(extractionMetadata(extraction, parsed.job_text));
   }, [parsed]);
 
+  useEffect(() => {
+    const normalized = normalizeJobUrl(url);
+    if (!normalized) {
+      setDuplicateJob(null);
+      return;
+    }
+
+    let cancelled = false;
+    api.jobs
+      .getByUrl(normalized)
+      .then((response) => {
+        if (cancelled) return;
+        setDuplicateJob({
+          id: response.job.id,
+          title: response.job.title,
+          company: response.job.company,
+        });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        if (err instanceof ApiError && err.status === 404) {
+          setDuplicateJob(null);
+          return;
+        }
+        console.error(err);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [url]);
+
   if (loadingHandoff || !parsed) {
     return (
       <Layout title="Add job" subtitle="Review captured details">
@@ -144,12 +179,21 @@ export function JobReviewPage() {
         },
       });
     } catch (err) {
+      if (err instanceof ApiError) {
+        const duplicate = duplicateJobFromError(err);
+        if (duplicate) {
+          setDuplicateJob(duplicate);
+          setError(null);
+          setSaving(false);
+          return;
+        }
+      }
       setError(err instanceof Error ? err.message : "Failed to save job");
       setSaving(false);
     }
   }
 
-  const canSave = title.trim() && company.trim() && description.trim();
+  const canSave = title.trim() && company.trim() && description.trim() && !duplicateJob;
 
   return (
     <Layout title="Add job" subtitle="Confirm details — then we analyze your fit">
@@ -174,7 +218,13 @@ export function JobReviewPage() {
           )}
         </div>
 
-        {error && (
+        {duplicateJob && (
+          <div className="mt-4">
+            <DuplicateJobBanner job={duplicateJob} captureSource={captureSource} />
+          </div>
+        )}
+
+        {error && !duplicateJob && (
           <div className="mt-4">
             <ErrorBanner message={error} />
           </div>
@@ -277,15 +327,18 @@ export function JobReviewPage() {
           }`}
         >
           <div className="mx-auto flex max-w-2xl items-center justify-between gap-4">
-            <Button
-              variant="ghost"
-              onClick={() => navigate("/jobs/new", { state: { pasteText: parsed.job_text } })}
-            >
+            <Button variant="ghost" onClick={() => navigate("/jobs/new", { state: { pasteText: parsed.job_text } })}>
               ← Back
             </Button>
-            <Button onClick={handleSave} loading={saving} disabled={!canSave} className="min-w-[200px]">
-              Save & analyze match
-            </Button>
+            {duplicateJob ? (
+              <Button onClick={() => navigate(`/jobs/${duplicateJob.id}`)} className="min-w-[200px]">
+                View existing job
+              </Button>
+            ) : (
+              <Button onClick={handleSave} loading={saving} disabled={!canSave} className="min-w-[200px]">
+                Save & analyze match
+              </Button>
+            )}
           </div>
         </div>
       </div>

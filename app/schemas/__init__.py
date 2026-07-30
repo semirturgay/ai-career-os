@@ -17,7 +17,6 @@ from app.schemas.api.models import (
 )
 from app.schemas.company_research import CompanyBrief as CompanyBrief
 from app.schemas.cover_letter import CoverLetterResult as CoverLetterResult
-from app.schemas.job_page_classify import JobPageClassification, JobPageClassifyRequest
 from app.schemas.resume_optimization import (
     ApplyResumeSuggestionsRequest as ApplyResumeSuggestionsRequest,
 )
@@ -34,8 +33,6 @@ __all__ = [
     "JobCreateRead",
     "JobIntakeHandoffCreate",
     "JobIntakeHandoffRead",
-    "JobPageClassification",
-    "JobPageClassifyRequest",
     "JobParseRead",
     "JobParseRequest",
     "JobRead",

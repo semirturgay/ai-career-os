@@ -8,6 +8,8 @@ const CAPTURE_SCRIPT_FILES = [
   "content/capture-page.js",
 ];
 
+let lastActiveTabId = null;
+
 chrome.runtime.onInstalled.addListener(() => {
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {
     // Older Chrome builds may not support sidePanel.
@@ -21,8 +23,12 @@ chrome.action.onClicked.addListener((tab) => {
   void setPanelRoute("/");
 });
 
+chrome.tabs.onActivated.addListener(({ tabId }) => {
+  lastActiveTabId = tabId;
+});
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type === "run-capture-pipeline" || message?.type === "run-capture-active-tab") {
+  if (message?.type === "run-capture-active-tab") {
     captureActiveTab()
       .then((result) => sendResponse({ ok: true, result }))
       .catch((error) =>
@@ -30,31 +36,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           ok: false,
           error: error instanceof Error ? error.message : "Capture failed",
           status: error.status,
-        }),
-      );
-    return true;
-  }
-
-  if (message?.type === "analyze-job-page") {
-    const tabId = message.tabId;
-    analyzeTab(tabId)
-      .then((result) => sendResponse({ ok: true, result }))
-      .catch((error) =>
-        sendResponse({
-          ok: false,
-          error: error instanceof Error ? error.message : "Analysis failed",
-        }),
-      );
-    return true;
-  }
-
-  if (message?.type === "analyze-active-tab") {
-    analyzeActiveTab()
-      .then((result) => sendResponse({ ok: true, result }))
-      .catch((error) =>
-        sendResponse({
-          ok: false,
-          error: error instanceof Error ? error.message : "Analysis failed",
         }),
       );
     return true;
@@ -71,7 +52,30 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 });
 
 async function getActiveBrowserTab() {
+  if (lastActiveTabId) {
+    try {
+      const tab = await chrome.tabs.get(lastActiveTabId);
+      if (tab?.id && !tab.url?.startsWith("chrome-extension://")) {
+        return tab;
+      }
+    } catch {
+      lastActiveTabId = null;
+    }
+  }
+
+  const windows = await chrome.windows.getAll({ populate: true, windowTypes: ["normal"] });
+  for (const win of windows) {
+    const activeTab = win.tabs?.find((t) => t.active);
+    if (activeTab?.id && !activeTab.url?.startsWith("chrome-extension://")) {
+      lastActiveTabId = activeTab.id;
+      return activeTab;
+    }
+  }
+
   const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+  if (tab?.id) {
+    lastActiveTabId = tab.id;
+  }
   return tab ?? null;
 }
 
@@ -81,47 +85,6 @@ async function captureActiveTab() {
     throw new Error("No active browser tab found");
   }
   return runCapturePipeline(tab.id);
-}
-
-async function analyzeActiveTab() {
-  const tab = await getActiveBrowserTab();
-  if (!tab?.id || !tab.url) {
-    return null;
-  }
-  if (tab.url.startsWith("chrome://") || tab.url.startsWith("chrome-extension://")) {
-    return null;
-  }
-
-  const dom = await analyzeTab(tab.id);
-  if (!dom?.textSample || dom.textSample.length < 50) {
-    return dom;
-  }
-
-  try {
-    const settings = await getExtensionSettings();
-    const classification = await classifyJobPage(settings.apiBaseUrl, {
-      text_sample: dom.textSample,
-      url: dom.url || tab.url,
-      page_title: dom.pageTitle || tab.title || null,
-    });
-    return mergeTabAnalysis(dom, classification);
-  } catch (error) {
-    return {
-      ...dom,
-      classificationError: error instanceof Error ? error.message : "Classification unavailable",
-    };
-  }
-}
-
-function mergeTabAnalysis(dom, classification) {
-  const isLikelyJobPost = classification.is_job_post;
-  return {
-    ...dom,
-    isLikelyJobPost,
-    confidence: classification.confidence,
-    classification,
-    pageType: classification.page_type,
-  };
 }
 
 async function injectCaptureScripts(tabId) {
@@ -141,20 +104,6 @@ async function captureFromTab(tabId) {
 
   if (!result?.result) {
     throw new Error("Could not read job content from this page");
-  }
-  return result.result;
-}
-
-async function analyzeTab(tabId) {
-  await injectCaptureScripts(tabId);
-
-  const [result] = await chrome.scripting.executeScript({
-    target: { tabId },
-    func: () => analyzeCurrentPage(),
-  });
-
-  if (!result?.result) {
-    throw new Error("Could not analyze this page");
   }
   return result.result;
 }
@@ -187,11 +136,19 @@ async function runCapturePipeline(tabId) {
     );
   }
 
-  let existingJob = null;
   if (capture.url) {
     try {
       const found = await findJobByUrl(settings.apiBaseUrl, capture.url);
-      existingJob = found.job;
+      const job = found.job;
+      return {
+        duplicate: true,
+        existingJob: {
+          id: job.id,
+          title: job.title,
+          company: job.company,
+        },
+        reviewRoute: `/jobs/${job.id}`,
+      };
     } catch (error) {
       if (error.status !== 404) {
         throw error;
@@ -212,7 +169,7 @@ async function runCapturePipeline(tabId) {
   return {
     handoffId: handoff.id,
     reviewRoute,
-    existingJob,
+    duplicate: false,
     preview: {
       title: parsed.structured_data.title,
       company: parsed.structured_data.company,

@@ -14,11 +14,15 @@ import {
   extractionMetadata,
 } from "../lib/jobExtraction";
 import { Badge, Button, ErrorBanner } from "../components/ui";
+import { DuplicateJobBanner } from "../components/DuplicateJobBanner";
+import type { DuplicateJobInfo } from "../lib/jobUrl";
 
 interface JobDetailLocationState {
   focusMatch?: boolean;
   fromIntake?: boolean;
   matchAnalysisId?: string;
+  duplicateCapture?: boolean;
+  existingJob?: DuplicateJobInfo;
 }
 
 export function JobDetailPage() {
@@ -26,6 +30,8 @@ export function JobDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const detailState = location.state as JobDetailLocationState | null;
+  const duplicateCapture = detailState?.duplicateCapture ?? false;
+  const duplicateJob = detailState?.existingJob ?? null;
   const intakeRef = useRef({
     focusMatch: detailState?.focusMatch ?? false,
     fromIntake: detailState?.fromIntake ?? false,
@@ -293,6 +299,10 @@ export function JobDetailPage() {
         <Link to="/" className="text-sm text-text-muted hover:text-accent lg:hidden">
           ← Pipeline
         </Link>
+
+        {duplicateCapture && duplicateJob && (
+          <DuplicateJobBanner job={duplicateJob} context="capture" />
+        )}
 
         {error && <ErrorBanner message={error} />}
 

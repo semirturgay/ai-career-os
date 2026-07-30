@@ -1,15 +1,33 @@
 import type { CompanyBrief, CoverLetterResult, Job, JobCreate, JobCreateResponse, JobIntakeHandoff, JobParseResult, MatchAnalysis, Profile, ProfileCreate, ResumeOptimizationResult, ResumeParseResult, ResumeSuggestion } from "../types";
 import type { AppSettings, ListModelsRequest, ModelListResponse, SettingsUpdate } from "../types/settings";
 import { getApiBase } from "../lib/extensionRuntime";
+import {
+  duplicateJobFromApiDetail,
+  duplicateJobFromErrorMessage,
+  type DuplicateJobInfo,
+} from "../lib/jobUrl";
 
 class ApiError extends Error {
   status: number;
+  detail?: unknown;
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, detail?: unknown) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.detail = detail;
   }
+}
+
+function duplicateJobFromError(error: ApiError): DuplicateJobInfo | null {
+  if (error.status !== 409) {
+    return null;
+  }
+  const fromDetail = duplicateJobFromApiDetail(error.detail);
+  if (fromDetail) {
+    return fromDetail;
+  }
+  return duplicateJobFromErrorMessage(error.message);
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -25,15 +43,29 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     let message = res.statusText;
+    let detail: unknown;
     try {
       const body = await res.json();
+      detail = body.detail;
       if (body.detail) {
-        message = typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail);
+        if (res.status === 409 && duplicateJobFromApiDetail(body.detail)) {
+          message = "This job is already in your pipeline";
+        } else {
+          message =
+            typeof body.detail === "string"
+              ? body.detail
+              : typeof body.detail === "object" &&
+                  body.detail !== null &&
+                  "message" in body.detail &&
+                  typeof body.detail.message === "string"
+                ? body.detail.message
+                : JSON.stringify(body.detail);
+        }
       }
     } catch {
       // ignore parse errors
     }
-    throw new ApiError(res.status, message);
+    throw new ApiError(res.status, message, detail);
   }
 
   if (res.status === 204) return undefined as T;
@@ -147,4 +179,5 @@ export const api = {
   },
 };
 
-export { ApiError };
+export type { DuplicateJobInfo };
+export { ApiError, duplicateJobFromError };

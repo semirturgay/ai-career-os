@@ -66,7 +66,7 @@ Interactive docs: http://127.0.0.1:8000/docs
 
 | Priority | Milestone | Why |
 |----------|-----------|-----|
-| **Now** | [M7 — Chrome extension](extension.md) | DOM-only job capture, auto-detect job pages, embed app in side panel |
+| **Now** | [M7 — Chrome extension](extension.md) | DOM-only job capture, user-initiated intake, embed app in side panel |
 | Soon | Paste resume intake | Extension-friendly onboarding without PDF upload |
 | Soon | Re-analyze on job update | JD edits should refresh match |
 | Soon | Tavily/Serper search in settings | Production-grade search |

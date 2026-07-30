@@ -19,4 +19,3 @@ def test_extractors_script_defines_detect_job_source():
     assert 'source === "greenhouse"' in script
     assert "function extractLinkedIn" in script
     assert "function resolveCaptureUrl" in script
-    assert "function detectJobPage" in script

@@ -16,8 +16,6 @@ from app.schemas import (
     JobCreateRead,
     JobIntakeHandoffCreate,
     JobIntakeHandoffRead,
-    JobPageClassification,
-    JobPageClassifyRequest,
     JobParseRead,
     JobParseRequest,
     JobRead,
@@ -25,15 +23,23 @@ from app.schemas import (
 )
 from app.services.company_research import company_brief_to_storage, research_company
 from app.services.job_intake_handoff import create_handoff, get_handoff
-from app.services.job_page_classifier import classify_job_page
 from app.services.job_paste_parser import prepare_job_post_text
 from app.services.job_structurer import structure_job
+from app.services.job_url import normalize_job_url
 from app.services.match import run_match_analysis
 from app.services.screening_card import attach_screening_card_to_metadata
 
 logger = get_logger(__name__)
 
 router = APIRouter(tags=["jobs"])
+
+
+async def _find_job_by_url(db: AsyncSession, url: str) -> Job | None:
+    normalized = normalize_job_url(url)
+    if not normalized:
+        return None
+    result = await db.execute(select(Job).where(Job.url == normalized).limit(1))
+    return result.scalar_one_or_none()
 
 
 @router.post("/jobs", response_model=JobCreateRead, status_code=status.HTTP_201_CREATED)
@@ -44,6 +50,20 @@ async def create_job(
 ):
     profile_id = body.profile_id
     payload = body.model_dump(exclude={"profile_id"})
+    if payload.get("url"):
+        payload["url"] = normalize_job_url(payload["url"])
+        existing = await _find_job_by_url(db, payload["url"])
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "message": "A job with this URL is already in your pipeline",
+                    "job_id": str(existing.id),
+                    "title": existing.title,
+                    "company": existing.company,
+                },
+            )
+
     job = Job(**payload)
     db.add(job)
     await db.flush()
@@ -104,31 +124,12 @@ async def parse_job_text(body: JobParseRequest, db: AsyncSession = Depends(get_d
     return JobParseRead(job_text=job_text, structured_data=extraction)
 
 
-@router.post("/jobs/classify-page", response_model=JobPageClassification)
-async def classify_job_page_endpoint(
-    body: JobPageClassifyRequest, db: AsyncSession = Depends(get_db)
-):
-    logger.info(
-        "Classifying page sample (%d chars, url=%s)",
-        len(body.text_sample),
-        "yes" if body.url else "no",
-    )
-    return await classify_job_page(
-        db,
-        body.text_sample,
-        url=body.url,
-        page_title=body.page_title,
-    )
-
-
 @router.get("/jobs/by-url", response_model=JobByUrlRead)
 async def get_job_by_url(
     url: str = Query(min_length=1, max_length=2048),
     db: AsyncSession = Depends(get_db),
 ):
-    normalized = url.strip()
-    result = await db.execute(select(Job).where(Job.url == normalized).limit(1))
-    job = result.scalar_one_or_none()
+    job = await _find_job_by_url(db, url)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found for this URL")
     return JobByUrlRead(job=JobRead.model_validate(job))
