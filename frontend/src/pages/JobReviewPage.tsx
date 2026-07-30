@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { JobExtraction, JobParseResult } from "../types";
 import { extractionMetadata } from "../lib/jobExtraction";
@@ -20,10 +20,15 @@ function workModeLabel(mode: JobExtraction["work_mode"]) {
 export function JobReviewPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const handoffId = searchParams.get("handoff");
   const state = location.state as JobReviewLocationState | null;
-  const parsed = state?.parsed;
+  const stateParsed = state?.parsed;
   const { profile } = useProfileRoute();
 
+  const [parsed, setParsed] = useState<JobParseResult | null>(stateParsed ?? null);
+  const [captureSource, setCaptureSource] = useState<string | null>(null);
+  const [loadingHandoff, setLoadingHandoff] = useState(Boolean(handoffId && !stateParsed));
   const [title, setTitle] = useState("");
   const [company, setCompany] = useState("");
   const [locationText, setLocationText] = useState("");
@@ -39,8 +44,48 @@ export function JobReviewPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!parsed) {
+    if (stateParsed) {
+      setParsed(stateParsed);
+      return;
+    }
+
+    if (!handoffId) {
       navigate("/jobs/new", { replace: true });
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingHandoff(true);
+    setError(null);
+
+    api.jobs
+      .getIntakeHandoff(handoffId)
+      .then((handoff) => {
+        if (cancelled) return;
+        setParsed({
+          job_text: handoff.job_text,
+          structured_data: handoff.structured_data,
+        });
+        setUrl(handoff.url ?? "");
+        setCaptureSource(handoff.source);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "Failed to load captured job");
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoadingHandoff(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [handoffId, navigate, stateParsed]);
+
+  useEffect(() => {
+    if (!parsed) {
       return;
     }
     const extraction = parsed.structured_data;
@@ -53,14 +98,20 @@ export function JobReviewPage() {
     setEmploymentType(extraction.employment_type ?? null);
     setMatchSummary(extraction.match_summary);
     setJobMetadata(extractionMetadata(extraction, parsed.job_text));
-  }, [parsed, navigate]);
+  }, [parsed]);
 
-  if (!parsed) {
+  if (loadingHandoff || !parsed) {
     return (
-      <Layout title="Add job" subtitle="Review extracted details">
+      <Layout title="Add job" subtitle="Review captured details">
         <div className="mx-auto max-w-2xl animate-pulse space-y-4 py-12">
-          <div className="h-4 w-48 rounded bg-surface-overlay" />
-          <div className="h-32 rounded-xl bg-surface-overlay" />
+          {error ? (
+            <ErrorBanner message={error} />
+          ) : (
+            <>
+              <div className="h-4 w-48 rounded bg-surface-overlay" />
+              <div className="h-32 rounded-xl bg-surface-overlay" />
+            </>
+          )}
         </div>
       </Layout>
     );
@@ -77,6 +128,7 @@ export function JobReviewPage() {
         description: description.trim(),
         location: locationText.trim() || undefined,
         url: url.trim() || undefined,
+        source: captureSource ?? undefined,
         raw_metadata: jobMetadata ?? undefined,
         profile_id: profile!.id,
       });
@@ -108,6 +160,11 @@ export function JobReviewPage() {
             Edit anything that looks off. We&apos;ll compare this role against{" "}
             <span className="font-medium text-text">{profile.name}</span>&apos;s profile.
           </p>
+          {captureSource && (
+            <div className="mt-3">
+              <Badge variant="info">Captured from {captureSource}</Badge>
+            </div>
+          )}
         </div>
 
         {error && (

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Career OS Extension Settings</title>
+    <style>
+      body {
+        font-family: Inter, system-ui, sans-serif;
+        max-width: 560px;
+        margin: 32px auto;
+        padding: 0 16px;
+        color: #111827;
+      }
+      label {
+        display: block;
+        margin-top: 16px;
+        font-weight: 600;
+      }
+      input {
+        width: 100%;
+        margin-top: 6px;
+        padding: 10px 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        box-sizing: border-box;
+      }
+      button {
+        margin-top: 20px;
+        padding: 10px 16px;
+        border: none;
+        border-radius: 8px;
+        background: #2563eb;
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .hint {
+        margin-top: 6px;
+        color: #64748b;
+        font-size: 13px;
+      }
+      #saved {
+        margin-top: 12px;
+        color: #166534;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Extension settings</h1>
+    <p>Point the extension at your local AI Career OS stack.</p>
+
+    <label for="api-base-url">API base URL</label>
+    <input id="api-base-url" type="url" />
+    <p class="hint">FastAPI backend, usually http://127.0.0.1:8000</p>
+
+    <label for="app-base-url">Web app URL</label>
+    <input id="app-base-url" type="url" />
+    <p class="hint">Vite frontend, usually http://localhost:5173</p>
+
+    <button id="save-btn" type="button">Save</button>
+    <div id="saved"></div>
+
+    <script src="../shared/settings.js"></script>
+    <script src="options.js"></script>
+  </body>
+</html>

@@ -103,6 +103,25 @@ class JobParseRead(BaseModel):
     structured_data: JobExtraction
 
 
+class JobIntakeHandoffCreate(BaseModel):
+    job_text: str = Field(min_length=1, max_length=100_000)
+    structured_data: JobExtraction
+    url: str | None = Field(default=None, max_length=2048)
+    source: str | None = Field(default=None, max_length=100)
+
+
+class JobIntakeHandoffRead(BaseModel):
+    id: UUID
+    job_text: str
+    structured_data: JobExtraction
+    url: str | None
+    source: str | None
+
+
+class JobByUrlRead(BaseModel):
+    job: JobRead
+
+
 class MatchAnalysisCreate(BaseModel):
     profile_id: UUID
     job_id: UUID

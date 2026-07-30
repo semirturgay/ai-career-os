@@ -175,3 +175,11 @@ export interface JobParseResult {
   job_text: string;
   structured_data: JobExtraction;
 }
+
+export interface JobIntakeHandoff {
+  id: string;
+  job_text: string;
+  structured_data: JobExtraction;
+  url: string | null;
+  source: string | null;
+}

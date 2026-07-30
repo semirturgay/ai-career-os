@@ -1,7 +1,7 @@
 import asyncio
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,14 +11,18 @@ from app.logging_config import get_logger
 from app.models import Job, MatchAnalysis, Profile
 from app.schemas import (
     CompanyBrief,
+    JobByUrlRead,
     JobCreate,
     JobCreateRead,
+    JobIntakeHandoffCreate,
+    JobIntakeHandoffRead,
     JobParseRead,
     JobParseRequest,
     JobRead,
     JobUpdate,
 )
 from app.services.company_research import company_brief_to_storage, research_company
+from app.services.job_intake_handoff import create_handoff, get_handoff
 from app.services.job_paste_parser import prepare_job_post_text
 from app.services.job_structurer import structure_job
 from app.services.match import run_match_analysis
@@ -95,6 +99,56 @@ async def parse_job_text(body: JobParseRequest, db: AsyncSession = Depends(get_d
         len(extraction.requirements),
     )
     return JobParseRead(job_text=job_text, structured_data=extraction)
+
+    return JobParseRead(job_text=job_text, structured_data=extraction)
+
+
+@router.get("/jobs/by-url", response_model=JobByUrlRead)
+async def get_job_by_url(
+    url: str = Query(min_length=1, max_length=2048),
+    db: AsyncSession = Depends(get_db),
+):
+    normalized = url.strip()
+    result = await db.execute(select(Job).where(Job.url == normalized).limit(1))
+    job = result.scalar_one_or_none()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found for this URL")
+    return JobByUrlRead(job=JobRead.model_validate(job))
+
+
+@router.post(
+    "/jobs/intake-handoff",
+    response_model=JobIntakeHandoffRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_job_intake_handoff(body: JobIntakeHandoffCreate):
+    handoff = create_handoff(
+        job_text=body.job_text,
+        structured_data=body.structured_data,
+        url=body.url,
+        source=body.source,
+    )
+    return JobIntakeHandoffRead(
+        id=handoff.id,
+        job_text=handoff.job_text,
+        structured_data=handoff.structured_data,
+        url=handoff.url,
+        source=handoff.source,
+    )
+
+
+@router.get("/jobs/intake-handoff/{handoff_id}", response_model=JobIntakeHandoffRead)
+async def read_job_intake_handoff(handoff_id: UUID):
+    handoff = get_handoff(handoff_id)
+    if not handoff:
+        raise HTTPException(status_code=404, detail="Intake handoff not found or expired")
+    return JobIntakeHandoffRead(
+        id=handoff.id,
+        job_text=handoff.job_text,
+        structured_data=handoff.structured_data,
+        url=handoff.url,
+        source=handoff.source,
+    )
 
 
 @router.get("/jobs/{job_id}", response_model=JobRead)

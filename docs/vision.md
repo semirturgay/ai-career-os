@@ -46,7 +46,7 @@ This repository should be educational. Thousands of developers may read it. Code
 3. **Human-in-the-loop** — especially for career decisions with real consequences
 4. **Production-ready patterns** — clean architecture, observability, testability
 5. **No premature abstraction** — prove the simple path first
-6. **No job scraping** — jobs are user-pasted only; optional URL stored as reference, never fetched
+6. **No third-party fetch for intake** — job and resume content come from **DOM or paste only** ([intake policy](intake-policy.md)). URLs are metadata, never fetched. The [Chrome extension](extension.md) reads the active tab; the backend does not load job posting URLs.
 
 ## Current product (M3)
 

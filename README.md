@@ -5,7 +5,7 @@
 
 **An open-source AI operating system for career management** — starting with explainable job matching, not black-box auto-apply bots.
 
-Upload a resume PDF, extract structured profile data with an LLM you control, review it, paste job descriptions through a **paste → review** wizard, and get **automatic explainable match analysis** — then research the company, tune your resume, and draft a cover letter from the job detail page.
+Capture jobs from your browser with the **Chrome extension** (DOM-only — never fetches third-party URLs), or paste descriptions in the web app. Upload or paste your resume, extract structured profile data with an LLM you control, review everything, and get **automatic explainable match analysis** — then research the company, tune your resume, and draft a cover letter.
 
 ---
 
@@ -16,6 +16,7 @@ Upload a resume PDF, extract structured profile data with an LLM you control, re
 - [How it works](#how-it-works)
 - [Tech stack](#tech-stack)
 - [Quick start](#quick-start)
+- [Chrome extension](#chrome-extension)
 - [Configuration](#configuration)
 - [Local LLM setup (LM Studio)](#local-llm-setup-lm-studio)
 - [Development](#development)
@@ -41,6 +42,8 @@ Built as a learning-friendly codebase for developers who want to understand:
 
 Long-term vision: an autonomous career assistant that discovers jobs, explains fit with evidence, and helps you act — always with transparency. See [docs/vision.md](docs/vision.md).
 
+**Intake policy:** job and resume content is **DOM or paste only** — we never fetch third-party job pages. See [docs/intake-policy.md](docs/intake-policy.md).
+
 ---
 
 ## Features
@@ -51,6 +54,7 @@ Long-term vision: an autonomous career assistant that discovers jobs, explains f
 - **Model picker** — fetches available models from your provider
 - **Human review** — edit extracted fields before saving (resume and job)
 - **Job intake wizard** — paste description → extract → review → save with automatic match
+- **Chrome extension (M7)** — capture job postings from the page you’re viewing (Greenhouse, Lever, LinkedIn, or generic); auto-detect job pages; review in app
 - **RAG-backed match** — retrieves relevant resume chunks before full analysis
 - **Job pipeline** — home dashboard ranks jobs by match score with polling
 - **Job detail tabs** — match, company research, resume optimization, cover letter (after full analysis)
@@ -69,27 +73,28 @@ Long-term vision: an autonomous career assistant that discovers jobs, explains f
 
 ```mermaid
 flowchart LR
-    A[PDF upload] --> B[pypdf text]
+    subgraph intake [Job intake]
+        X[Chrome extension] -->|DOM text| Y[Parse + review]
+        P[Paste in web app] --> Y
+    end
+    A[PDF or paste resume] --> B[pypdf / paste text]
     B --> C[LLM structured extraction]
     C --> D[Review and edit]
     D --> E[(Profile)]
-    F[Paste job description] --> G[LLM job extraction]
-    G --> H[Review fields]
-    H --> I[Save and analyze]
+    Y --> I[Save and analyze]
     E --> I
     I --> J[RAG + full match]
     J --> K[Pipeline + job detail tabs]
     K --> L[Research / Resume / Cover letter]
 ```
 
-1. **Extract text** from PDF (no LLM — fast, deterministic)
-2. **Structure** resume with your configured LLM (`ResumeExtraction`)
-3. **Review** on onboarding — fix anything the model got wrong
-4. **Save** profile with raw text + structured JSONB snapshot
-5. **Add a job** — paste description → extract → **review step** → save with `profile_id`
-6. **Match analysis** — RAG retrieves resume evidence, then full `MatchResult` in background
-7. **Job detail** — after full analysis: company research, resume tweaks, cover letter
-8. **Home pipeline** — jobs ranked by score; open any job for deep dive or re-analyze
+1. **Profile** — PDF upload or paste → LLM `ResumeExtraction` → review → save
+2. **Add a job** — **extension capture** or paste → extract → review → save with `profile_id`
+3. **Match analysis** — RAG retrieves resume evidence, then full `MatchResult` in background
+4. **Job detail** — company research, resume tweaks, cover letter
+5. **Home pipeline** — jobs ranked by score
+
+**Intake policy:** job and resume content is **DOM or paste only** — we never fetch third-party job pages. See [docs/intake-policy.md](docs/intake-policy.md).
 
 ---
 
@@ -105,6 +110,7 @@ flowchart LR
 | PDF | pypdf |
 | LLM client | httpx (OpenAI-compatible + structured output) |
 | Frontend | Vite, React, TypeScript, Tailwind CSS |
+| Extension | Chrome Manifest V3 (DOM capture, side panel planned) |
 | Package managers | [uv](https://docs.astral.sh/uv/) (Python), [Bun](https://bun.sh) (frontend) |
 
 ---
@@ -164,7 +170,7 @@ App: http://127.0.0.1:5173
 2. Upload a PDF resume
 3. Wait for extraction (local models can take 30–60s)
 4. Review structured fields → save profile
-5. Add a job — paste description → extract → review → **Save & analyze match**
+5. Add a job — **Chrome extension capture** (see below) or paste in app → review → **Save & analyze match**
 6. View ranked pipeline on home; open job detail for match, research, resume, cover letter
 
 > **Note:** Use `127.0.0.1` instead of `localhost` for API URLs on macOS — the Vite proxy and DB URL are configured this way to avoid IPv6 hangs.
@@ -179,6 +185,69 @@ docker compose down -v
 docker compose up db -d
 uv run alembic upgrade head
 ```
+
+---
+
+## Chrome extension
+
+Capture jobs where you already browse them — LinkedIn, Greenhouse, Lever, or any careers page. The extension reads the **active tab DOM only**; it never `fetch()`es job board URLs.
+
+Policy: [docs/intake-policy.md](docs/intake-policy.md) · Architecture: [docs/extension.md](docs/extension.md) · Install details: [extension/README.md](extension/README.md)
+
+### Install (development)
+
+1. Complete [Quick start](#quick-start) steps 1–4 (backend + frontend running).
+2. Chrome → `chrome://extensions` → enable **Developer mode**.
+3. **Load unpacked** → select the [`extension/`](extension/) folder.
+4. Open extension **Settings** → API `http://127.0.0.1:8000`, app `http://localhost:5173`.
+
+### Capture flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Tab as Job board tab
+    participant Ext as Extension
+    participant API as AI Career OS API
+    participant App as Web app review
+
+    User->>Tab: Opens job posting
+    User->>Ext: Capture and review
+    Ext->>Tab: Inject script read DOM
+    Ext->>API: POST /jobs/parse-text
+    Ext->>API: POST /jobs/intake-handoff
+    Ext->>App: Open /jobs/new/review?handoff=…
+    User->>App: Confirm fields Save and analyze
+    API->>API: Background match analysis
+```
+
+1. Open a job posting (on LinkedIn search, **click a job** so the detail panel is visible).
+2. Extension popup → **likely job posting** detection (URL + DOM — no third-party fetch).
+3. **Capture & review** → opens web app review with extracted fields.
+4. **Save & analyze match** — same human-in-the-loop flow as paste intake.
+
+### Supported boards
+
+| Source | Notes |
+|--------|--------|
+| **Greenhouse** | `*.greenhouse.io` |
+| **Lever** | `*.lever.co` |
+| **LinkedIn** | Search detail panel or `/jobs/view/{id}` |
+| **Other** | Generic main-content fallback |
+
+### Extension API calls (our backend only)
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/v1/jobs/parse-text` | Structure captured DOM text |
+| `POST /api/v1/jobs/intake-handoff` | Hand off to web app review (30 min TTL) |
+| `GET /api/v1/jobs/by-url` | Duplicate URL hint |
+
+### Coming next
+
+- Side panel with embedded React app (extension as primary UI)
+- Paste resume intake in extension
+- Capture opens side panel instead of a new tab
 
 ---
 
@@ -273,7 +342,7 @@ docker compose up --build
 ```
 ai-career-os/
 ├── app/
-├── api/              # FastAPI routes (profiles, jobs, match_analyses, settings, llm)
+│   ├── api/              # FastAPI routes (profiles, jobs, match_analyses, settings, llm)
 │   ├── db/               # SQLAlchemy session
 │   ├── models/           # ORM models
 │   ├── prompts/          # Version-controlled LLM prompts (.txt)
@@ -281,19 +350,16 @@ ai-career-os/
 │   └── services/
 │       ├── llm/          # Provider abstraction + generate_structured()
 │       ├── search/       # Web search (DuckDuckGo) + tracing
-│       ├── resume_parser.py
-│       ├── resume_structurer.py
-│       ├── job_structurer.py
-│       ├── match/          # analyzer, orchestrator, formatters, result
-│       ├── rag/            # chunking, embeddings, retrieval for match
-│       ├── company_research.py
-│       ├── cover_letter_generator.py
-│       └── resume_optimizer.py
-├── alembic/              # Database migrations
-├── frontend/             # Vite + React SPA (sidebar nav, job wizard, detail tabs)
-├── docs/                 # Architecture, milestones, AI engineering guide
-├── scripts/run_evals.py  # Offline + live eval runner
-└── tests/evals/          # Golden fixtures + assertions
+│       ├── rag/          # chunking, embeddings, pgvector retrieval
+│       ├── match/        # analyzer, orchestrator, formatters
+│       ├── job_intake_handoff.py  # Extension → web app handoff
+│       └── …
+├── extension/            # Chrome extension — DOM capture, job board adapters
+├── frontend/             # Vite + React SPA
+├── docs/                 # Architecture, intake policy, extension principles
+├── alembic/
+├── scripts/run_evals.py
+└── tests/evals/
 ```
 
 ---
@@ -312,6 +378,9 @@ Base path: `/api/v1`
 | GET | `/profiles/{id}/resume.pdf` | Download profile as PDF |
 | DELETE | `/profiles/{id}` | Delete profile |
 | POST | `/jobs/parse-text` | Paste JD → structured `JobExtraction` |
+| POST | `/jobs/intake-handoff` | Extension handoff → web app review screen |
+| GET | `/jobs/intake-handoff/{id}` | Load a pending extension capture |
+| GET | `/jobs/by-url` | Find an existing job by posting URL |
 | POST | `/jobs` | Create job; optional `profile_id` queues match analysis |
 | GET | `/jobs` | List jobs |
 | GET | `/jobs/{id}` | Get job |
@@ -343,8 +412,8 @@ Full interactive docs: http://127.0.0.1:8000/docs
 | **M4** Resume optimization | Done | Gap-driven suggestions with review before apply |
 | **M5** Cover letter | Done | 3-pass cover letter chain on job detail |
 | **M6** Company research | Done | Bounded agent loop + web search + source-grounded brief |
-| **M7** Job discovery | **Next** | Official APIs for job feeds |
-| — | In progress | RAG citations in UI, Tavily/Serper search, brief → cover letter |
+| **M7** Chrome extension | **In progress** | DOM-only job capture, auto-detect, extension-first intake |
+| — | Planned | Side panel UI, paste resume, LinkedIn/Ashby polish |
 
 Details: [docs/milestones/](docs/milestones/README.md) · Current state: [docs/project-status.md](docs/project-status.md)
 
@@ -360,7 +429,10 @@ Details: [docs/milestones/](docs/milestones/README.md) · Current state: [docs/p
 
 | Doc | Contents |
 |-----|----------|
-| [docs/ai-engineering.md](docs/ai-engineering.md) | **Evals, tracing, structured outputs, patterns** |
+| [docs/intake-policy.md](docs/intake-policy.md) | **DOM/paste only — no third-party job fetch** |
+| [docs/extension.md](docs/extension.md) | Chrome extension principles and architecture |
+| [extension/README.md](extension/README.md) | Load unpacked, capture flow, supported boards |
+| [docs/ai-engineering.md](docs/ai-engineering.md) | Evals, tracing, structured outputs, patterns |
 | [docs/vision.md](docs/vision.md) | Long-term product vision |
 | [docs/architecture.md](docs/architecture.md) | System design and data model |
 | [docs/project-status.md](docs/project-status.md) | Current state and what's next |

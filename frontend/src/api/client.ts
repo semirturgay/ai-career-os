@@ -1,4 +1,4 @@
-import type { CompanyBrief, CoverLetterResult, Job, JobCreate, JobCreateResponse, JobParseResult, MatchAnalysis, Profile, ProfileCreate, ResumeOptimizationResult, ResumeParseResult, ResumeSuggestion } from "../types";
+import type { CompanyBrief, CoverLetterResult, Job, JobCreate, JobCreateResponse, JobIntakeHandoff, JobParseResult, MatchAnalysis, Profile, ProfileCreate, ResumeOptimizationResult, ResumeParseResult, ResumeSuggestion } from "../types";
 import type { AppSettings, ListModelsRequest, ModelListResponse, SettingsUpdate } from "../types/settings";
 
 const BASE = "/api/v1";
@@ -103,6 +103,10 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ text }),
       }),
+    getIntakeHandoff: (handoffId: string) =>
+      request<JobIntakeHandoff>(`/jobs/intake-handoff/${handoffId}`),
+    getByUrl: (url: string) =>
+      request<{ job: Job }>(`/jobs/by-url?${new URLSearchParams({ url }).toString()}`),
     researchCompany: (id: string) =>
       request<CompanyBrief>(`/jobs/${id}/company-research`, { method: "POST" }),
   },

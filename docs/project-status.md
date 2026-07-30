@@ -1,12 +1,12 @@
 # Project Status
 
-Last updated: 2026-07-29
+Last updated: 2026-07-30
 
 ## Where we are
 
-AI Career OS has a working **resume → job → explainable match → act** loop with **web-grounded company research** and a polished intake UX. The product is intentionally narrow: paste your data, get evidence-backed analysis — no black-box auto-apply.
+AI Career OS has a working **resume → job → explainable match → act** loop with **web-grounded company research**, **pgvector RAG**, and a **Chrome extension MVP** for job capture. The product direction is **extension-first**: DOM-only capture (never fetch job URLs), side panel for the full app, paste resume as primary onboarding.
 
-**Current milestone:** M6 complete (including bounded agent loop for company research). **Next:** M7 — job discovery, or RAG for match evidence (see roadmap discussion).
+**Current milestone:** M7 in progress — [Chrome extension](extension.md) as main intake surface.
 
 ## Product flow (today)
 
@@ -66,8 +66,8 @@ Interactive docs: http://127.0.0.1:8000/docs
 
 | Priority | Milestone | Why |
 |----------|-----------|-----|
-| **Next** | [M7 — Job discovery](milestones/README.md) | Official APIs for job feeds |
-| Soon | RAG for match evidence | Retrieve resume chunks per requirement when context grows |
+| **Now** | [M7 — Chrome extension](extension.md) | DOM-only job capture, auto-detect job pages, embed app in side panel |
+| Soon | Paste resume intake | Extension-friendly onboarding without PDF upload |
 | Soon | Re-analyze on job update | JD edits should refresh match |
 | Soon | Tavily/Serper search in settings | Production-grade search |
 | Soon | Company brief → cover letter context | Richer outreach |
@@ -76,7 +76,8 @@ Interactive docs: http://127.0.0.1:8000/docs
 ## Intentionally deferred
 
 - Authentication (single-user local dev)
-- Vector DB / RAG at scale (resume + JD still fit in context for most cases)
+- Vector DB / RAG at scale — pgvector cache shipped; further scale TBD
+- Fetching job URLs (extension or backend) — [DOM-only capture](extension.md)
 - Agent frameworks (LangChain, ReAct) — bounded Python loops only
 - Auto-apply
 

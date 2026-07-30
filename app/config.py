@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     match_llm_max_tokens: int = 768
     cover_letter_max_body_chars: int = 400
     cover_letter_llm_max_tokens: int = 512
+    app_web_url: str = "http://localhost:5173"
 
     # Optional env fallbacks for LLM (overridden by DB settings when set)
     openai_api_key: str | None = None

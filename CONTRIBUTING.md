@@ -7,6 +7,7 @@ fixtures, and code improvements are all welcome.
 ## Before you start
 
 - Read the [README](README.md) for setup and architecture overview.
+- Read [docs/intake-policy.md](docs/intake-policy.md) — **DOM/paste only; never fetch third-party job or resume pages.**
 - Browse [docs/ai-engineering.md](docs/ai-engineering.md) for evals, prompts, and
   structured-output patterns.
 - Check [open issues](https://github.com/semirturgay/ai-career-os/issues) to avoid
