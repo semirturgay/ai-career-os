@@ -12,19 +12,6 @@ const items = [
     ),
   },
   {
-    to: "/jobs/new",
-    label: "Add job",
-    icon: (
-      <svg viewBox="0 0 20 20" fill="currentColor" className="size-5">
-        <path
-          fillRule="evenodd"
-          d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-          clipRule="evenodd"
-        />
-      </svg>
-    ),
-  },
-  {
     to: "/profile",
     label: "Profile",
     icon: (
@@ -55,24 +42,28 @@ const items = [
 export function EmbeddedNav() {
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-30 flex border-t border-border bg-surface-raised/95 backdrop-blur-md"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface-raised/95 backdrop-blur-md"
       aria-label="Main"
     >
-      {items.map((item) => (
-        <NavLink
-          key={item.to}
-          to={item.to}
-          end={item.end}
-          className={({ isActive }) =>
-            `flex flex-1 flex-col items-center gap-0.5 px-1 py-2.5 text-[10px] font-medium transition ${
-              isActive ? "text-accent" : "text-text-muted hover:text-text"
-            }`
-          }
-        >
-          {item.icon}
-          {item.label}
-        </NavLink>
-      ))}
+      <div className="flex px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1">
+        {items.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.end}
+            className={({ isActive }) =>
+              `flex flex-1 flex-col items-center gap-1 rounded-lg px-2 py-2 text-[11px] font-medium transition ${
+                isActive
+                  ? "bg-accent/8 text-accent"
+                  : "text-text-muted hover:bg-surface-overlay hover:text-text"
+              }`
+            }
+          >
+            {item.icon}
+            {item.label}
+          </NavLink>
+        ))}
+      </div>
     </nav>
   );
 }

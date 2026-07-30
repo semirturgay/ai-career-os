@@ -76,7 +76,7 @@ export function HomePage() {
             ? "Capture a job to start matching"
             : "Your opportunities"
       }
-      showCaptureBar={embedded ? !isEmptyPipeline : undefined}
+      showCaptureBar={embedded ? true : undefined}
     >
       <div className={embedded ? "space-y-4" : "space-y-8"}>
         <section

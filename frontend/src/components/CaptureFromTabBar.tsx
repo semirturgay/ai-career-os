@@ -1,5 +1,6 @@
 /// <reference types="chrome" />
 
+import { Link } from "react-router-dom";
 import { useCaptureFromActiveTab } from "../hooks/useCaptureFromActiveTab";
 import { IS_EXTENSION } from "../lib/extensionRuntime";
 import { Button, ErrorBanner } from "./ui";
@@ -13,27 +14,34 @@ export function CaptureFromTabBar() {
 
   return (
     <section className="border-b border-border bg-surface-raised px-3 py-2.5">
-      <div className="flex items-center gap-2">
-        <div className="min-w-0 flex-1">
-          {tabBlocked ? (
-            <p className="text-xs text-text-muted">Open a job posting in a browser tab to capture.</p>
-          ) : tabHint ? (
-            <p className="truncate text-xs text-text-muted">
-              Active tab · <span className="font-medium text-text">{tabHint}</span>
-            </p>
-          ) : (
-            <p className="text-xs text-text-muted">Capture the job posting from your active tab.</p>
-          )}
-        </div>
+      <p className="truncate text-xs text-text-muted">
+        {tabBlocked ? (
+          "Open a job posting in a browser tab to capture."
+        ) : tabHint ? (
+          <>
+            Active tab · <span className="font-medium text-text">{tabHint}</span>
+          </>
+        ) : (
+          "Capture the job posting from your active tab."
+        )}
+      </p>
+
+      <div className="mt-2 flex items-center gap-2">
+        <Link to="/jobs/new" className="shrink-0">
+          <Button variant="secondary" className="px-3 py-1.5 text-xs font-semibold">
+            Paste job
+          </Button>
+        </Link>
         <Button
           onClick={() => void capture()}
           loading={capturing}
           disabled={tabBlocked}
-          className="shrink-0 px-3 py-1.5 text-xs font-semibold"
+          className="min-w-0 flex-1 py-1.5 text-xs font-semibold"
         >
           {capturing ? "Reading…" : "Capture tab"}
         </Button>
       </div>
+
       {error && (
         <div className="mt-2">
           <ErrorBanner message={error} />
