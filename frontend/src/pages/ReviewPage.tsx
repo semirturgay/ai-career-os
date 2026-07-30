@@ -4,8 +4,14 @@ import { api } from "../api/client";
 import type { ResumeParseResult, ResumeStructuredData } from "../types";
 import { Layout } from "../components/Layout";
 import { OnboardingSteps } from "../components/OnboardingSteps";
+import { PageLoader } from "../components/AiLoadingState";
 import { StructuredProfileView } from "../components/StructuredProfileView";
 import { Button, ErrorBanner, Field, Input, Textarea } from "../components/ui";
+import {
+  clearOnboardingResume,
+  loadOnboardingResume,
+  saveOnboardingResume,
+} from "../lib/onboardingHandoff";
 import { setActiveProfileId } from "../lib/profile";
 
 interface ReviewLocationState {
@@ -30,9 +36,10 @@ export function ReviewPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as ReviewLocationState | null;
-  const parsed = state?.parsed;
   const isUpdate = state?.mode === "update" && !!state.profileId;
 
+  const [parsed, setParsed] = useState<ResumeParseResult | null>(state?.parsed ?? null);
+  const [loadingHandoff, setLoadingHandoff] = useState(!isUpdate && !state?.parsed);
   const [name, setName] = useState("");
   const [headline, setHeadline] = useState("");
   const [email, setEmail] = useState("");
@@ -44,8 +51,43 @@ export function ReviewPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!parsed) {
+    if (isUpdate) {
+      if (!state?.parsed) {
+        navigate(state?.returnTo ?? "/profile", { replace: true });
+      } else {
+        setParsed(state.parsed);
+        setLoadingHandoff(false);
+      }
+      return;
+    }
+
+    if (state?.parsed) {
+      void saveOnboardingResume(state.parsed);
+      setParsed(state.parsed);
+      setLoadingHandoff(false);
+      return;
+    }
+
+    let cancelled = false;
+    void loadOnboardingResume().then((stored) => {
+      if (cancelled) {
+        return;
+      }
+      if (stored) {
+        setParsed(stored);
+        setLoadingHandoff(false);
+        return;
+      }
       navigate("/onboarding/upload", { replace: true });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isUpdate, navigate, state?.parsed, state?.returnTo]);
+
+  useEffect(() => {
+    if (!parsed) {
       return;
     }
     const structured = parsed.structured_data;
@@ -56,9 +98,17 @@ export function ReviewPage() {
     setSkillsText(skillsToText(structured?.skills ?? []));
     setResumeText(parsed.resume_text);
     setStructuredData(structured);
-  }, [parsed, navigate]);
+  }, [parsed]);
 
-  if (!parsed) return null;
+  if (loadingHandoff || !parsed) {
+    return (
+      <Layout showSidebar={false} showCaptureBar={false}>
+        <div className="flex min-h-[50vh] items-center justify-center">
+          <PageLoader variant="page" />
+        </div>
+      </Layout>
+    );
+  }
 
   async function handleSave() {
     if (!name.trim() || !resumeText.trim()) return;
@@ -94,6 +144,7 @@ export function ReviewPage() {
           resume_text: resumeText.trim(),
           structured_data: payloadStructured,
         });
+        await clearOnboardingResume();
         setActiveProfileId(profile.id);
         navigate("/", { replace: true });
       }
@@ -109,13 +160,14 @@ export function ReviewPage() {
       title={isUpdate ? "Review update" : "Review profile"}
       subtitle={isUpdate ? "Confirm changes before saving" : "Edit extracted fields before matching"}
       showSidebar={isUpdate}
+      showCaptureBar={isUpdate}
     >
       <div className="space-y-6">
         {!isUpdate && <OnboardingSteps current={3} />}
 
         <div>
-          <h2 className="text-2xl font-semibold">Review & confirm</h2>
-          <p className="mt-2 text-text-muted">
+          <h2 className="text-xl font-semibold sm:text-2xl">Review & confirm</h2>
+          <p className="mt-2 text-sm text-text-muted">
             We structured your resume with AI. Edit anything that looks wrong before saving.
           </p>
         </div>
@@ -153,7 +205,7 @@ export function ReviewPage() {
               />
             </Field>
           </div>
-          <Field label="Skills" hint="One skill per line">
+          <Field label="Skills" hint="One line per skill">
             <Textarea
               value={skillsText}
               onChange={(e) => setSkillsText(e.target.value)}
@@ -189,7 +241,7 @@ export function ReviewPage() {
           </section>
         )}
 
-        <div className="flex justify-between">
+        <div className="flex justify-between gap-3">
           <Button
             variant="ghost"
             onClick={() =>
@@ -199,7 +251,7 @@ export function ReviewPage() {
             {isUpdate ? "Cancel" : "Re-upload"}
           </Button>
           <Button
-            onClick={handleSave}
+            onClick={() => void handleSave()}
             loading={saving}
             disabled={!name.trim() || !resumeText.trim()}
             className="px-8"

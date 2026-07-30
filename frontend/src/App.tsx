@@ -1,4 +1,5 @@
 import { BrowserRouter, HashRouter, Navigate, Route, Routes } from "react-router-dom";
+import { CaptureSuctionOverlay } from "./components/CaptureSuctionOverlay";
 import { ExtensionBootstrap, ExtensionRouteSync } from "./components/ExtensionBootstrap";
 import { RequireProfileLayout } from "./components/RequireProfileLayout";
 import { AiProviderPage } from "./pages/AiProviderPage";
@@ -19,6 +20,7 @@ export default function App() {
   return (
     <Router>
       <ExtensionBootstrap>
+        <CaptureSuctionOverlay />
         <ExtensionRouteSync />
         <Routes>
           <Route path="/welcome" element={<WelcomePage />} />

@@ -43,6 +43,7 @@ export function HomePage() {
 
   const pendingCount = pendingAnalysesCount(analyses, profile.id);
   usePolling(refreshAnalyses, pendingCount > 0);
+  const isEmptyPipeline = jobs.length === 0;
 
   if (dataLoading) {
     return (
@@ -66,7 +67,17 @@ export function HomePage() {
     .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0];
 
   return (
-    <Layout title="Pipeline" subtitle="Your opportunities">
+    <Layout
+      title={embedded && isEmptyPipeline ? undefined : "Pipeline"}
+      subtitle={
+        embedded && isEmptyPipeline
+          ? undefined
+          : isEmptyPipeline
+            ? "Capture a job to start matching"
+            : "Your opportunities"
+      }
+      showCaptureBar={embedded ? !isEmptyPipeline : undefined}
+    >
       <div className={embedded ? "space-y-4" : "space-y-8"}>
         <section
           className={`rounded-xl border border-border bg-surface-raised ${
@@ -76,9 +87,23 @@ export function HomePage() {
           {embedded ? (
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-text">{profile.name}</p>
-                {profile.headline && (
-                  <p className="truncate text-xs text-text-muted">{profile.headline}</p>
+                {isEmptyPipeline ? (
+                  <>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-accent">
+                      Profile ready
+                    </p>
+                    <p className="truncate text-sm font-semibold text-text">{profile.name}</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="truncate text-sm font-semibold text-text">{profile.name}</p>
+                    {profile.headline && (
+                      <p className="truncate text-xs text-text-muted">{profile.headline}</p>
+                    )}
+                  </>
+                )}
+                {isEmptyPipeline && profile.headline && (
+                  <p className="mt-0.5 truncate text-xs text-text-muted">{profile.headline}</p>
                 )}
               </div>
               <Link
@@ -124,18 +149,24 @@ export function HomePage() {
           )}
         </section>
 
-        <section className="space-y-3">
-          <div>
-            <h3 className={`font-semibold ${embedded ? "text-base" : "text-lg"}`}>Opportunities</h3>
-            <p className="text-xs text-text-muted sm:text-sm">
-              {pendingCount > 0
-                ? `Analyzing ${pendingCount} job${pendingCount === 1 ? "" : "s"}…`
-                : "Ranked by match score"}
-            </p>
-          </div>
+        {!isEmptyPipeline && (
+          <section className="space-y-3">
+            <div>
+              <h3 className={`font-semibold ${embedded ? "text-base" : "text-lg"}`}>Opportunities</h3>
+              <p className="text-xs text-text-muted sm:text-sm">
+                {pendingCount > 0
+                  ? `Analyzing ${pendingCount} job${pendingCount === 1 ? "" : "s"}…`
+                  : "Ranked by match score"}
+              </p>
+            </div>
 
+            <JobBoard jobs={jobs} analyses={analyses} profileId={profile.id} />
+          </section>
+        )}
+
+        {isEmptyPipeline && (
           <JobBoard jobs={jobs} analyses={analyses} profileId={profile.id} />
-        </section>
+        )}
       </div>
     </Layout>
   );

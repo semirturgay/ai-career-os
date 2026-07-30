@@ -25,6 +25,7 @@ export function ExtensionRouteSync() {
 
 export function ExtensionBootstrap({ children }: ExtensionBootstrapProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [ready, setReady] = useState(!IS_EXTENSION);
 
   useEffect(() => {
@@ -37,7 +38,9 @@ export function ExtensionBootstrap({ children }: ExtensionBootstrapProps) {
     async function bootstrap() {
       await loadExtensionApiBase();
       const route = await getPanelRoute();
-      if (route && route !== "/") {
+      const current = `${location.pathname}${location.search}`;
+      // Only restore a stored route on a fresh open at home — never clobber in-app navigation state.
+      if (route && route !== "/" && route !== current && location.pathname === "/") {
         navigate(parseExtensionRoute(route), { replace: true });
       }
       if (!cancelled) {
@@ -60,7 +63,7 @@ export function ExtensionBootstrap({ children }: ExtensionBootstrapProps) {
       cancelled = true;
       chrome.storage.sync.onChanged.removeListener(onSyncChange);
     };
-  }, [navigate]);
+  }, [location.pathname, location.search, navigate]);
 
   if (!ready) {
     return <PageLoader variant="page" />;

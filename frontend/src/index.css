@@ -48,3 +48,81 @@ body {
 .ai-message-fade {
   animation: ai-message-in 0.35s ease-out;
 }
+
+@keyframes capture-suction-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes capture-suction-ring {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes capture-suction-portal-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+@keyframes capture-suction-particle {
+  0% {
+    opacity: 0;
+    transform: translate(-28px, 0) scale(0.5);
+  }
+  20% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(42vw, -8px) scale(0.2);
+  }
+}
+
+@keyframes capture-suction-message {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.capture-suction-overlay {
+  animation: capture-suction-in 0.25s ease-out;
+}
+
+.capture-suction-portal {
+  animation: capture-suction-portal-pulse 1.2s ease-in-out infinite;
+}
+
+.capture-suction-ring {
+  animation: capture-suction-ring 3s linear infinite;
+}
+
+.capture-suction-ring-delay {
+  animation-duration: 4.5s;
+  animation-direction: reverse;
+}
+
+.capture-suction-particle {
+  animation: capture-suction-particle ease-in infinite;
+}
+
+.capture-suction-message {
+  animation: capture-suction-message 0.35s ease-out;
+}

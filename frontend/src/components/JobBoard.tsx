@@ -9,6 +9,7 @@ import {
 } from "../lib/matches";
 import { useEmbeddedMode } from "../hooks/useEmbeddedMode";
 import { IS_EXTENSION } from "../lib/extensionRuntime";
+import { ExtensionEmptyPipeline } from "./ExtensionEmptyPipeline";
 import { Badge, Button } from "./ui";
 import { ScoreRing } from "./ScoreRing";
 
@@ -127,6 +128,10 @@ export function JobBoard({ jobs, analyses, profileId }: JobBoardProps) {
   const embedded = useEmbeddedMode();
 
   if (jobs.length === 0) {
+    if (IS_EXTENSION && embedded) {
+      return <ExtensionEmptyPipeline />;
+    }
+
     return (
       <div className="flex flex-col items-center rounded-xl border border-dashed border-border bg-surface-raised px-5 py-12 text-center">
         <p className="text-3xl" aria-hidden>

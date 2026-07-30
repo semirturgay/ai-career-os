@@ -8,6 +8,7 @@ import { Layout } from "../components/Layout";
 import { OnboardingSteps } from "../components/OnboardingSteps";
 import { ProviderForm } from "../components/ProviderForm";
 import { Button } from "../components/ui";
+import { IS_EXTENSION } from "../lib/extensionRuntime";
 
 export function AiProviderPage() {
   const navigate = useNavigate();
@@ -33,13 +34,13 @@ export function AiProviderPage() {
   }, []);
 
   return (
-    <Layout showSidebar={false}>
-      <div className="mx-auto max-w-2xl space-y-8 px-6 py-12">
+    <Layout showSidebar={false} showCaptureBar={false}>
+      <div className="mx-auto max-w-2xl space-y-8 px-3 py-6 sm:px-6 sm:py-12">
         <OnboardingSteps current={1} />
 
         <div>
-          <h2 className="text-2xl font-semibold">Choose your AI provider</h2>
-          <p className="mt-2 text-text-muted">
+          <h2 className="text-xl font-semibold sm:text-2xl">Choose your AI provider</h2>
+          <p className="mt-2 text-sm text-text-muted">
             Bring your own API key. We use structured LLM outputs for resume parsing and job
             matching — provider-agnostic by design.
           </p>
@@ -54,7 +55,7 @@ export function AiProviderPage() {
             initialBaseUrl={initialBaseUrl}
             apiKeySet={apiKeySet}
             loading={saving}
-            submitLabel="Continue to upload"
+            submitLabel={IS_EXTENSION ? "Continue" : "Continue to upload"}
             onSubmit={async (data) => {
               setSaving(true);
               try {

@@ -9,6 +9,8 @@ interface LayoutProps {
   title?: string;
   subtitle?: string;
   showSidebar?: boolean;
+  /** Show capture bar in extension side panel (default: true when embedded). */
+  showCaptureBar?: boolean;
 }
 
 export function Layout({
@@ -16,8 +18,10 @@ export function Layout({
   title,
   subtitle,
   showSidebar = true,
+  showCaptureBar,
 }: LayoutProps) {
   const embedded = useEmbeddedMode();
+  const captureBar = showCaptureBar ?? embedded;
 
   if (embedded) {
     return (
@@ -25,7 +29,7 @@ export function Layout({
         <div className="flex items-center justify-between border-b border-border bg-surface-raised px-3 py-2.5">
           <Logo compact linkTo="/" />
         </div>
-        <CaptureFromTabBar />
+        {captureBar && <CaptureFromTabBar />}
         {(title || subtitle) && (
           <header className="border-b border-border bg-surface/80 px-4 py-3 backdrop-blur-sm">
             {title && <h1 className="text-base font-semibold tracking-tight text-text">{title}</h1>}

@@ -8,6 +8,8 @@ const CAPTURE_SCRIPT_FILES = [
   "content/capture-page.js",
 ];
 
+const OVERLAY_SCRIPT_FILE = "content/capture-overlay.js";
+
 let lastActiveTabId = null;
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -87,6 +89,40 @@ async function captureActiveTab() {
   return runCapturePipeline(tab.id);
 }
 
+async function injectOverlayScript(tabId) {
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: [OVERLAY_SCRIPT_FILE],
+  });
+}
+
+async function runOverlayAction(tabId, action, outcome) {
+  try {
+    await injectOverlayScript(tabId);
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      func: (overlayAction, overlayOutcome) => {
+        const api = window.__aiCareerCaptureOverlay;
+        if (!api) {
+          return;
+        }
+        if (overlayAction === "show") {
+          api.show();
+        } else {
+          api.hide(overlayOutcome);
+        }
+      },
+      args: [action, outcome ?? null],
+    });
+  } catch {
+    // Overlay is optional — never block capture.
+  }
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function injectCaptureScripts(tabId) {
   await chrome.scripting.executeScript({
     target: { tabId },
@@ -116,10 +152,14 @@ async function runCapturePipeline(tabId) {
     throw new Error("Open a job posting page in this window, then capture from the side panel.");
   }
 
+  await runOverlayAction(tabId, "show");
+
   let capture;
   try {
     capture = await captureFromTab(tabId);
   } catch (error) {
+    await runOverlayAction(tabId, "hide", "error");
+    await delay(480);
     const message = error instanceof Error ? error.message : "Capture failed";
     if (message.includes("Cannot access contents of")) {
       throw new Error("This page cannot be read by the extension. Try a different tab.");
@@ -131,50 +171,65 @@ async function runCapturePipeline(tabId) {
   }
 
   if (!capture.text || capture.text.length < 100) {
+    await runOverlayAction(tabId, "hide", "error");
+    await delay(480);
     throw new Error(
       "Not enough job text on this page (need at least 100 characters). Open a page where the full job description is visible, then try again.",
     );
   }
 
-  if (capture.url) {
-    try {
-      const found = await findJobByUrl(settings.apiBaseUrl, capture.url);
-      const job = found.job;
-      return {
-        duplicate: true,
-        existingJob: {
-          id: job.id,
-          title: job.title,
-          company: job.company,
-        },
-        reviewRoute: `/jobs/${job.id}`,
-      };
-    } catch (error) {
-      if (error.status !== 404) {
-        throw error;
+  let result;
+  try {
+    if (capture.url) {
+      try {
+        const found = await findJobByUrl(settings.apiBaseUrl, capture.url);
+        const job = found.job;
+        result = {
+          duplicate: true,
+          existingJob: {
+            id: job.id,
+            title: job.title,
+            company: job.company,
+          },
+          reviewRoute: `/jobs/${job.id}`,
+        };
+      } catch (error) {
+        if (error.status !== 404) {
+          throw error;
+        }
       }
     }
+
+    if (!result) {
+      const parsed = await parseJobText(settings.apiBaseUrl, capture.text);
+      const handoff = await createIntakeHandoff(settings.apiBaseUrl, {
+        job_text: parsed.job_text,
+        structured_data: parsed.structured_data,
+        url: capture.url,
+        source: capture.source,
+      });
+
+      const reviewRoute = `/jobs/new/review?handoff=${handoff.id}`;
+
+      result = {
+        handoffId: handoff.id,
+        reviewRoute,
+        duplicate: false,
+        preview: {
+          title: parsed.structured_data.title,
+          company: parsed.structured_data.company,
+          source: capture.source,
+          url: capture.url,
+        },
+      };
+    }
+
+    await runOverlayAction(tabId, "hide", "success");
+    await delay(620);
+    return result;
+  } catch (error) {
+    await runOverlayAction(tabId, "hide", "error");
+    await delay(480);
+    throw error;
   }
-
-  const parsed = await parseJobText(settings.apiBaseUrl, capture.text);
-  const handoff = await createIntakeHandoff(settings.apiBaseUrl, {
-    job_text: parsed.job_text,
-    structured_data: parsed.structured_data,
-    url: capture.url,
-    source: capture.source,
-  });
-
-  const reviewRoute = `/jobs/new/review?handoff=${handoff.id}`;
-
-  return {
-    handoffId: handoff.id,
-    reviewRoute,
-    duplicate: false,
-    preview: {
-      title: parsed.structured_data.title,
-      company: parsed.structured_data.company,
-      source: capture.source,
-      url: capture.url,
-    },
-  };
 }
