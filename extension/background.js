@@ -10,7 +10,14 @@ const CAPTURE_SCRIPT_FILES = [
 
 const OVERLAY_SCRIPT_FILE = "content/capture-overlay.js";
 
-let lastActiveTabId = null;
+const lastActiveTabByWindow = new Map();
+
+function isCapturableUrl(url) {
+  if (!url) {
+    return false;
+  }
+  return !url.startsWith("chrome://") && !url.startsWith("chrome-extension://");
+}
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {
@@ -25,13 +32,13 @@ chrome.action.onClicked.addListener((tab) => {
   void setPanelRoute("/");
 });
 
-chrome.tabs.onActivated.addListener(({ tabId }) => {
-  lastActiveTabId = tabId;
+chrome.tabs.onActivated.addListener(({ tabId, windowId }) => {
+  lastActiveTabByWindow.set(windowId, tabId);
 });
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === "run-capture-active-tab") {
-    captureActiveTab()
+    captureActiveTab(message.windowId)
       .then((result) => sendResponse({ ok: true, result }))
       .catch((error) =>
         sendResponse({
@@ -53,36 +60,41 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   return undefined;
 });
 
-async function getActiveBrowserTab() {
-  if (lastActiveTabId) {
-    try {
-      const tab = await chrome.tabs.get(lastActiveTabId);
-      if (tab?.id && !tab.url?.startsWith("chrome-extension://")) {
-        return tab;
+async function getActiveBrowserTab(windowId) {
+  if (windowId != null) {
+    const [activeTab] = await chrome.tabs.query({ active: true, windowId });
+    if (activeTab?.id && isCapturableUrl(activeTab.url)) {
+      lastActiveTabByWindow.set(windowId, activeTab.id);
+      return activeTab;
+    }
+
+    const rememberedTabId = lastActiveTabByWindow.get(windowId);
+    if (rememberedTabId) {
+      try {
+        const tab = await chrome.tabs.get(rememberedTabId);
+        if (tab.windowId === windowId && isCapturableUrl(tab.url)) {
+          return tab;
+        }
+      } catch {
+        lastActiveTabByWindow.delete(windowId);
       }
-    } catch {
-      lastActiveTabId = null;
     }
   }
 
   const windows = await chrome.windows.getAll({ populate: true, windowTypes: ["normal"] });
   for (const win of windows) {
     const activeTab = win.tabs?.find((t) => t.active);
-    if (activeTab?.id && !activeTab.url?.startsWith("chrome-extension://")) {
-      lastActiveTabId = activeTab.id;
+    if (activeTab?.id && isCapturableUrl(activeTab.url)) {
+      lastActiveTabByWindow.set(win.id, activeTab.id);
       return activeTab;
     }
   }
 
-  const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-  if (tab?.id) {
-    lastActiveTabId = tab.id;
-  }
-  return tab ?? null;
+  return null;
 }
 
-async function captureActiveTab() {
-  const tab = await getActiveBrowserTab();
+async function captureActiveTab(windowId) {
+  const tab = await getActiveBrowserTab(windowId);
   if (!tab?.id) {
     throw new Error("No active browser tab found");
   }

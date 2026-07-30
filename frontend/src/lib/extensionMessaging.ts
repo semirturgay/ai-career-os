@@ -44,8 +44,13 @@ function sendMessage<T>(message: Record<string, unknown>): Promise<ExtensionMess
   });
 }
 
-export async function runCaptureFromActiveTab(): Promise<CapturePipelineResult> {
-  const response = await sendMessage<CapturePipelineResult>({ type: "run-capture-active-tab" });
+export async function runCaptureFromActiveTab(
+  windowId?: number | null,
+): Promise<CapturePipelineResult> {
+  const response = await sendMessage<CapturePipelineResult>({
+    type: "run-capture-active-tab",
+    windowId: windowId ?? undefined,
+  });
   if (!response.ok || !response.result) {
     throw new Error(response.error || "Capture failed");
   }

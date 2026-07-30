@@ -1,7 +1,6 @@
 import { Sidebar } from "./Sidebar";
 import { EmbeddedNav } from "./EmbeddedNav";
 import { CaptureFromTabBar } from "./CaptureFromTabBar";
-import { Logo } from "./Logo";
 import { useEmbeddedMode } from "../hooks/useEmbeddedMode";
 
 interface LayoutProps {
@@ -26,9 +25,6 @@ export function Layout({
   if (embedded) {
     return (
       <div className="flex min-h-screen flex-col bg-surface pb-14">
-        <div className="flex items-center justify-between border-b border-border bg-surface-raised px-3 py-2.5">
-          <Logo compact linkTo="/" />
-        </div>
         {captureBar && <CaptureFromTabBar />}
         {(title || subtitle) && (
           <header className="border-b border-border bg-surface/80 px-4 py-3 backdrop-blur-sm">

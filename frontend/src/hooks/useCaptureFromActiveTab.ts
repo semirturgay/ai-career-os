@@ -2,22 +2,15 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  formatTabLabel,
+  getSidePanelWindowId,
+  subscribeActiveBrowserTab,
+} from "../lib/activeBrowserTab";
 import { captureAnimationStore } from "../lib/captureAnimationStore";
 import { runCaptureFromActiveTab } from "../lib/extensionMessaging";
 import { parseExtensionRoute } from "../lib/extensionNavigation";
 import { IS_EXTENSION } from "../lib/extensionRuntime";
-
-function formatTabLabel(url: string, title?: string): string {
-  if (title && title.length > 0 && title.length <= 80) {
-    return title;
-  }
-  try {
-    const parsed = new URL(url);
-    return parsed.hostname + parsed.pathname.slice(0, 40);
-  } catch {
-    return url.slice(0, 60);
-  }
-}
 
 export function useCaptureFromActiveTab() {
   const navigate = useNavigate();
@@ -25,19 +18,17 @@ export function useCaptureFromActiveTab() {
   const [error, setError] = useState<string | null>(null);
   const [tabHint, setTabHint] = useState<string | null>(null);
   const [tabBlocked, setTabBlocked] = useState(false);
+  const [windowId, setWindowId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!IS_EXTENSION) {
       return;
     }
 
-    chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
-      const tab = tabs[0];
-      if (!tab?.url) {
-        setTabHint(null);
-        return;
-      }
-      if (tab.url.startsWith("chrome://") || tab.url.startsWith("chrome-extension://")) {
+    void getSidePanelWindowId().then(setWindowId);
+
+    return subscribeActiveBrowserTab((tab) => {
+      if (!tab) {
         setTabBlocked(true);
         setTabHint(null);
         return;
@@ -52,7 +43,7 @@ export function useCaptureFromActiveTab() {
     setError(null);
     captureAnimationStore.start(tabHint);
     try {
-      const result = await runCaptureFromActiveTab();
+      const result = await runCaptureFromActiveTab(windowId);
       if (result.duplicate && result.existingJob) {
         navigate(`/jobs/${result.existingJob.id}`, {
           state: { duplicateCapture: true, existingJob: result.existingJob },
@@ -66,7 +57,7 @@ export function useCaptureFromActiveTab() {
       captureAnimationStore.stop();
       setCapturing(false);
     }
-  }, [navigate, tabHint]);
+  }, [navigate, tabHint, windowId]);
 
   return { capturing, error, tabHint, tabBlocked, capture };
 }

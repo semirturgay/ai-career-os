@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import logoUrl from "/logo.svg";
 
 interface LogoProps {
   compact?: boolean;
@@ -8,24 +9,13 @@ interface LogoProps {
 
 export function LogoMark({ className = "size-8" }: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 32 32"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
+    <img
+      src={logoUrl}
+      alt=""
       className={className}
       aria-hidden
-    >
-      <rect width="32" height="32" rx="8" fill="#0f766e" />
-      <path
-        d="M8 22V12l4 3 4-5 4 4 4-6v14"
-        stroke="white"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        opacity="0.95"
-      />
-      <circle cx="22" cy="9" r="2" fill="#99f6e4" />
-    </svg>
+      draggable={false}
+    />
   );
 }
 
