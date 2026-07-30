@@ -5,7 +5,12 @@ import pytest
 
 from app.schemas.cover_letter import CoverLetterCritique, CoverLetterDraft, CoverLetterResult
 from app.schemas.match_analysis import MatchGap, MatchResult, MatchStrength
-from app.services.cover_letter_generator import generate_cover_letter
+from app.schemas.rag import ResumeChunk, ScoredChunk
+from app.services.cover_letter_generator import (
+    build_cover_letter_user_message,
+    format_company_brief_section,
+    generate_cover_letter,
+)
 
 
 @pytest.mark.asyncio
@@ -16,6 +21,8 @@ async def test_generate_cover_letter_runs_draft_critique_revise_chain():
         company="Acme",
         description="Python backend",
         location=None,
+        raw_metadata={},
+        company_brief=None,
     )
     match_result = MatchResult(
         score=85.0,
@@ -46,9 +53,15 @@ async def test_generate_cover_letter_runs_draft_critique_revise_chain():
     mock_client = AsyncMock()
     mock_client.generate_structured = AsyncMock(side_effect=[draft, critique, final])
 
-    with patch(
-        "app.services.cover_letter_generator.get_llm_client",
-        new=AsyncMock(return_value=mock_client),
+    with (
+        patch(
+            "app.services.cover_letter_generator.get_llm_client",
+            new=AsyncMock(return_value=mock_client),
+        ),
+        patch(
+            "app.services.cover_letter_generator._retrieve_cover_letter_chunks",
+            new=AsyncMock(return_value=[]),
+        ),
     ):
         result = await generate_cover_letter(
             db=None,
@@ -60,3 +73,57 @@ async def test_generate_cover_letter_runs_draft_critique_revise_chain():
     assert mock_client.generate_structured.await_count == 3
     assert "FastAPI" in result.body
     assert result.critique_summary == "Added missing FastAPI strength."
+
+
+def test_build_cover_letter_user_message_includes_company_brief_and_rag_chunks():
+    profile = SimpleNamespace(
+        structured_data={"name": "Jane Doe", "skills": ["Python"]},
+        resume_text="Jane Doe resume",
+    )
+    job = SimpleNamespace(
+        title="Backend Engineer",
+        company="FinTech Labs",
+        description="Build payment APIs",
+        location="Remote",
+        company_brief={
+            "company": "FinTech Labs",
+            "summary": "FinTech Labs builds payment APIs.",
+            "culture_signals": ["Remote-first"],
+            "recent_news": [],
+            "interview_signals": [],
+            "red_flags": [],
+        },
+    )
+    match_result = MatchResult(
+        score=80.0,
+        recommendation="apply",
+        strengths=[MatchStrength(point=8.0, evidence="Python backend experience.")],
+        gaps=[],
+        summary="Good fit.",
+    )
+    rag_chunks = [
+        ScoredChunk(
+            chunk=ResumeChunk(id="skill-0", text="Python", section="skill"),
+            score=0.95,
+        )
+    ]
+
+    message = build_cover_letter_user_message(
+        profile,
+        job,
+        match_result,
+        rag_chunks=rag_chunks,
+    )
+
+    assert "Retrieved resume evidence" in message
+    assert "[id: skill-0] Python" in message
+    assert "Company research brief" in message
+    assert "payment APIs" in message
+    assert "Character budget" in message
+    assert "400 characters" in message
+    assert "FinTech Labs" in message
+
+
+def test_format_company_brief_section_returns_empty_for_missing_brief():
+    assert format_company_brief_section(None) == ""
+    assert format_company_brief_section({}) == ""

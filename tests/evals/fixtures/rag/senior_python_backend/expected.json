@@ -1,0 +1,17 @@
+{
+  "min_chunks": 4,
+  "must_include_chunk_ids": ["skill-0", "skill-1", "skill-2", "skill-4"],
+  "min_score_for_chunk_ids": {
+    "skill-0": 0.9,
+    "skill-1": 0.9,
+    "skill-2": 0.9,
+    "skill-4": 0.9
+  },
+  "must_include_terms_in_top_k": {
+    "k": 8,
+    "terms": ["FastAPI", "PostgreSQL", "REST"]
+  },
+  "min_sections": {
+    "skill": 4
+  }
+}

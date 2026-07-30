@@ -13,6 +13,17 @@ def test_cap_cover_letter_body_truncates_at_word_boundary():
     assert not capped.endswith(" ")
 
 
+def test_cap_cover_letter_body_prefers_sentence_boundary():
+    text = (
+        "First sentence is complete. "
+        "Second sentence is also complete. "
+        "Third sentence starts but never finishes because the model ran on"
+    )
+    capped = cap_cover_letter_body(text, max_chars=95)
+    assert capped.endswith(".")
+    assert "never finishes" not in capped
+
+
 def test_normalize_cover_letter_result_payload_caps_body():
     from app.services.cover_letter_normalize import normalize_cover_letter_result_payload
 

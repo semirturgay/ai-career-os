@@ -1,0 +1,17 @@
+{
+  "company": "FinTech Labs",
+  "summary": "FinTech Labs builds payment APIs with a remote-first Python engineering team focused on high-scale backend systems.",
+  "culture_signals": [
+    "Remote-first engineering team",
+    "Payments and fintech domain"
+  ],
+  "recent_news": [
+    "Launched a new developer payments API for external integrations"
+  ],
+  "interview_signals": [
+    "Prepare system design for payment flows and API reliability"
+  ],
+  "red_flags": [],
+  "sources": [],
+  "researched_at": "2026-07-29T12:00:00Z"
+}

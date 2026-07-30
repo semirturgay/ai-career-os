@@ -8,7 +8,9 @@ import pytest
 
 from app.schemas.cover_letter import CoverLetterCritique, CoverLetterDraft, CoverLetterResult
 from app.schemas.match_analysis import MatchResult
-from app.services.cover_letter_generator import generate_cover_letter
+from app.services.cover_letter_generator import (
+    generate_cover_letter,
+)
 from app.services.cover_letter_normalize import (
     normalize_cover_letter_draft_payload,
     normalize_cover_letter_result_payload,
@@ -69,6 +71,10 @@ async def test_generate_cover_letter_pipeline_with_mocked_llm(case_name: str, ca
         company=job_data["company"],
         description=job_data["description"],
         location=job_data.get("location"),
+        raw_metadata=job_data.get("raw_metadata", {}),
+        company_brief=load_json(case_dir / "company_brief.json")
+        if (case_dir / "company_brief.json").exists()
+        else None,
     )
     match_result = MatchResult.model_validate(match_data)
 
@@ -79,9 +85,15 @@ async def test_generate_cover_letter_pipeline_with_mocked_llm(case_name: str, ca
     mock_client = AsyncMock()
     mock_client.generate_structured = AsyncMock(side_effect=[draft, critique, final])
 
-    with patch(
-        "app.services.cover_letter_generator.get_llm_client",
-        new=AsyncMock(return_value=mock_client),
+    with (
+        patch(
+            "app.services.cover_letter_generator.get_llm_client",
+            new=AsyncMock(return_value=mock_client),
+        ),
+        patch(
+            "app.services.cover_letter_generator._retrieve_cover_letter_chunks",
+            new=AsyncMock(return_value=[]),
+        ),
     ):
         result = await generate_cover_letter(
             db=None,
@@ -99,6 +111,9 @@ async def test_generate_cover_letter_pipeline_with_mocked_llm(case_name: str, ca
     user_message = mock_client.generate_structured.await_args_list[0].kwargs["messages"][-1].content
     assert job_data["company"] in user_message
     assert profile_data["name"] in user_message
+    if job.company_brief:
+        assert "Company research brief" in user_message
+        assert "payment APIs" in user_message
 
     failures = evaluate_cover_letter(result, expected, case_name=case_name)
     assert not failures, "\n".join(failures)

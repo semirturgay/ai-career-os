@@ -100,6 +100,7 @@ Golden fixtures under `tests/evals/fixtures/` decouple **prompt/schema iteration
 | Resume extraction | `backend_engineer`, `qwen_shape` | `eval_assertions.py` |
 | Job extraction | `greenhouse_backend` | `job_eval_assertions.py` |
 | Match analysis | `senior_python_backend` | `match_eval_assertions.py` |
+| RAG retrieval | `senior_python_backend` | `rag_eval_assertions.py` |
 | Resume optimization | `senior_python_backend` | `resume_optimization_eval_assertions.py` |
 | Cover letter | `senior_python_backend` | `cover_letter_eval_assertions.py` |
 | Company research | `fintech_labs` | `company_research_eval_assertions.py` |

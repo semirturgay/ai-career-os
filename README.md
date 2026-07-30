@@ -61,7 +61,7 @@ Long-term vision: an autonomous career assistant that discovers jobs, explains f
 - **Export resume PDF** — download your profile as a formatted PDF
 - **Re-analyze** — manual retry on job detail when profile or job changes
 - **Version-controlled prompts** — prompts live in `app/prompts/`, not buried in code
-- **Eval harness** — six golden suites (resume, job, match, optimization, cover letter, research)
+- **Eval harness** — seven golden suites (resume, job, match, RAG retrieval, optimization, cover letter, research)
 
 ---
 

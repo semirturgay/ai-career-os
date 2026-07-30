@@ -48,8 +48,8 @@ export function CoverLetterPanel({ analysis }: CoverLetterPanelProps) {
       {!letter && !loading && (
         <div className="space-y-4">
           <p className="text-sm text-text-muted">
-            Generates a short tailored note (max 400 characters) from your match analysis, then
-            self-critiques and revises before showing the final version.
+            Generates a short tailored note (max 400 characters) from your match analysis,
+            company research, and resume evidence, then self-critiques and revises.
           </p>
           <Button onClick={handleGenerate}>Generate cover letter</Button>
         </div>

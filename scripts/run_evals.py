@@ -24,6 +24,7 @@ EVAL_SUITES: dict[str, str] = {
     "resume_optimization": "tests/evals/test_resume_optimization_eval.py",
     "cover_letter": "tests/evals/test_cover_letter_eval.py",
     "company_research": "tests/evals/test_company_research_eval.py",
+    "rag_retrieval": "tests/evals/test_rag_retrieval_eval.py",
 }
 
 

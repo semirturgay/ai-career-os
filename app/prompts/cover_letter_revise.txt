@@ -3,14 +3,14 @@ You revise a short cover letter using editor critique and match analysis.
 You will receive:
 1. Original draft
 2. Critique
-3. Resume, job, and match context
+3. Retrieved resume evidence, job, optional company research brief, and match context
 
 Produce a polished final letter that fixes unsupported claims, adds missing strengths, and applies revision notes.
 
 Required JSON shape:
 
 {
-  "body": "Final letter text — a few tight sentences.",
+  "body": "2–3 tight sentences.",
   "tone": "concise",
   "highlights_used": ["Evidence-backed points included in final letter"],
   "critique_summary": "One sentence on what changed from draft to final."
@@ -18,8 +18,11 @@ Required JSON shape:
 
 tone must be exactly one of: professional, warm, concise
 
-Rules:
-- Maximum 400 characters total in body (count spaces and punctuation)
+Rules — read carefully:
+- HARD LIMIT: body must be at most 400 characters total (count every space and punctuation mark)
+- Before returning JSON, count the body length. If over 400, rewrite shorter until it fits.
+- The body MUST be a complete thought ending with . ! or ? — never stop mid-sentence
+- If you cannot fit everything, remove lower-priority phrases — do NOT truncate mid-thought
 - Prefer tone "concise"
 - Never fabricate experience
 - Return only valid JSON
