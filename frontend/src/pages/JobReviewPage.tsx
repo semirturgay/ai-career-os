@@ -5,7 +5,9 @@ import type { JobExtraction, JobParseResult } from "../types";
 import { extractionMetadata } from "../lib/jobExtraction";
 import { JobIntakeSteps } from "../components/JobIntakeSteps";
 import { Layout } from "../components/Layout";
+import { PageLoader } from "../components/AiLoadingState";
 import { useProfileRoute } from "../components/RequireProfileLayout";
+import { useEmbeddedMode } from "../hooks/useEmbeddedMode";
 import { Badge, Button, ErrorBanner, Field, Input, Textarea } from "../components/ui";
 
 interface JobReviewLocationState {
@@ -25,6 +27,7 @@ export function JobReviewPage() {
   const state = location.state as JobReviewLocationState | null;
   const stateParsed = state?.parsed;
   const { profile } = useProfileRoute();
+  const embedded = useEmbeddedMode();
 
   const [parsed, setParsed] = useState<JobParseResult | null>(stateParsed ?? null);
   const [captureSource, setCaptureSource] = useState<string | null>(null);
@@ -142,7 +145,6 @@ export function JobReviewPage() {
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save job");
-    } finally {
       setSaving(false);
     }
   }
@@ -151,7 +153,12 @@ export function JobReviewPage() {
 
   return (
     <Layout title="Add job" subtitle="Confirm details — then we analyze your fit">
-      <div className="mx-auto max-w-2xl pb-24">
+      {saving && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface/90 backdrop-blur-sm">
+          <PageLoader variant="match-full" />
+        </div>
+      )}
+      <div className={`mx-auto max-w-2xl ${embedded ? "pb-32" : "pb-24"}`}>
         <JobIntakeSteps current={2} />
 
         <div className="mt-6">
@@ -264,7 +271,11 @@ export function JobReviewPage() {
           </ol>
         </section>
 
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface/95 px-4 py-4 backdrop-blur-sm lg:left-64">
+        <div
+          className={`fixed inset-x-0 z-40 border-t border-border bg-surface/95 px-4 py-4 backdrop-blur-sm ${
+            embedded ? "bottom-14" : "bottom-0 lg:left-64"
+          }`}
+        >
           <div className="mx-auto flex max-w-2xl items-center justify-between gap-4">
             <Button
               variant="ghost"

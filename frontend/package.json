@@ -7,6 +7,7 @@
     "dev": "vite",
     "predev": "bun run generate:api-types",
     "build": "tsc -b && vite build",
+    "build:extension": "tsc -b && vite build --config vite.extension.config.ts --mode extension",
     "preview": "vite preview",
     "generate:api-types": "openapi-typescript http://127.0.0.1:8000/openapi.json -o src/types/api.generated.ts"
   },
@@ -17,6 +18,7 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.8",
+    "@types/chrome": "^0.0.320",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
     "@vitejs/plugin-react": "^4.5.2",

@@ -1,4 +1,4 @@
-importScripts("shared/settings.js", "shared/api.js");
+importScripts("shared/settings.js", "shared/api.js", "shared/panel.js");
 
 // Capture policy: DOM-only from the active tab. Never fetch third-party job URLs.
 // See docs/extension.md
@@ -8,9 +8,22 @@ const CAPTURE_SCRIPT_FILES = [
   "content/capture-page.js",
 ];
 
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {
+    // Older Chrome builds may not support sidePanel.
+  });
+});
+
+chrome.action.onClicked.addListener((tab) => {
+  if (!tab?.id) {
+    return;
+  }
+  void setPanelRoute("/");
+});
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type === "run-capture-pipeline") {
-    runCapturePipeline(message.tabId)
+  if (message?.type === "run-capture-pipeline" || message?.type === "run-capture-active-tab") {
+    captureActiveTab()
       .then((result) => sendResponse({ ok: true, result }))
       .catch((error) =>
         sendResponse({
@@ -23,7 +36,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message?.type === "analyze-job-page") {
-    analyzeTab(message.tabId)
+    const tabId = message.tabId;
+    analyzeTab(tabId)
       .then((result) => sendResponse({ ok: true, result }))
       .catch((error) =>
         sendResponse({
@@ -34,8 +48,81 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 
+  if (message?.type === "analyze-active-tab") {
+    analyzeActiveTab()
+      .then((result) => sendResponse({ ok: true, result }))
+      .catch((error) =>
+        sendResponse({
+          ok: false,
+          error: error instanceof Error ? error.message : "Analysis failed",
+        }),
+      );
+    return true;
+  }
+
+  if (message?.type === "check-api-health") {
+    checkApiHealth(message.apiBaseUrl)
+      .then((healthy) => sendResponse({ ok: true, healthy }))
+      .catch(() => sendResponse({ ok: true, healthy: false }));
+    return true;
+  }
+
   return undefined;
 });
+
+async function getActiveBrowserTab() {
+  const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+  return tab ?? null;
+}
+
+async function captureActiveTab() {
+  const tab = await getActiveBrowserTab();
+  if (!tab?.id) {
+    throw new Error("No active browser tab found");
+  }
+  return runCapturePipeline(tab.id);
+}
+
+async function analyzeActiveTab() {
+  const tab = await getActiveBrowserTab();
+  if (!tab?.id || !tab.url) {
+    return null;
+  }
+  if (tab.url.startsWith("chrome://") || tab.url.startsWith("chrome-extension://")) {
+    return null;
+  }
+
+  const dom = await analyzeTab(tab.id);
+  if (!dom?.textSample || dom.textSample.length < 50) {
+    return dom;
+  }
+
+  try {
+    const settings = await getExtensionSettings();
+    const classification = await classifyJobPage(settings.apiBaseUrl, {
+      text_sample: dom.textSample,
+      url: dom.url || tab.url,
+      page_title: dom.pageTitle || tab.title || null,
+    });
+    return mergeTabAnalysis(dom, classification);
+  } catch (error) {
+    return {
+      ...dom,
+      classificationError: error instanceof Error ? error.message : "Classification unavailable",
+    };
+  }
+}
+
+function mergeTabAnalysis(dom, classification) {
+  const isLikelyJobPost = classification.is_job_post;
+  return {
+    ...dom,
+    isLikelyJobPost,
+    confidence: classification.confidence,
+    classification,
+    pageType: classification.page_type,
+  };
+}
 
 async function injectCaptureScripts(tabId) {
   await chrome.scripting.executeScript({
@@ -77,7 +164,7 @@ async function runCapturePipeline(tabId) {
   const tab = await chrome.tabs.get(tabId);
 
   if (!tab.url || tab.url.startsWith("chrome://") || tab.url.startsWith("chrome-extension://")) {
-    throw new Error("Open a job posting page first");
+    throw new Error("Open a job posting page in this window, then capture from the side panel.");
   }
 
   let capture;
@@ -86,7 +173,7 @@ async function runCapturePipeline(tabId) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Capture failed";
     if (message.includes("Cannot access contents of")) {
-      throw new Error("This page cannot be read by extensions. Try the company's job board instead.");
+      throw new Error("This page cannot be read by the extension. Try a different tab.");
     }
     if (message.includes("Receiving end does not exist")) {
       throw new Error("Refresh the job page, then try capture again.");
@@ -120,12 +207,11 @@ async function runCapturePipeline(tabId) {
     source: capture.source,
   });
 
-  const reviewUrl = `${settings.appBaseUrl}/jobs/new/review?handoff=${handoff.id}`;
-  await chrome.tabs.create({ url: reviewUrl });
+  const reviewRoute = `/jobs/new/review?handoff=${handoff.id}`;
 
   return {
     handoffId: handoff.id,
-    reviewUrl,
+    reviewRoute,
     existingJob,
     preview: {
       title: parsed.structured_data.title,

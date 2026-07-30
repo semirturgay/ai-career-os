@@ -53,3 +53,22 @@ async function findJobByUrl(apiBaseUrl, url) {
   const params = new URLSearchParams({ url });
   return apiRequest(apiBaseUrl, `/jobs/by-url?${params.toString()}`);
 }
+
+async function classifyJobPage(apiBaseUrl, payload) {
+  return apiRequest(apiBaseUrl, "/jobs/classify-page", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+async function checkApiHealth(apiBaseUrl) {
+  try {
+    const response = await fetch(`${apiBaseUrl.replace(/\/$/, "")}/health`, {
+      method: "GET",
+      signal: AbortSignal.timeout(4000),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}

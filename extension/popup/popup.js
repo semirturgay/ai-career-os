@@ -1,102 +1,41 @@
-const statusEl = document.getElementById("status");
-const pageUrlEl = document.getElementById("page-url");
-const captureBtn = document.getElementById("capture-btn");
+const apiStatusEl = document.getElementById("api-status");
+const apiStatusLabelEl = document.getElementById("api-status-label");
+const openPanelBtn = document.getElementById("open-panel-btn");
 const optionsBtn = document.getElementById("options-btn");
 
-function setStatus(message, tone = "default") {
-  statusEl.textContent = message;
-  statusEl.className = `status${tone === "error" ? " error" : tone === "success" ? " success" : ""}`;
+function setApiStatus(healthy) {
+  apiStatusEl.className = `pill ${healthy ? "ok" : "error"}`;
+  apiStatusLabelEl.textContent = healthy ? "API online" : "API offline";
 }
 
-async function getActiveTab() {
-  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-  return tabs[0];
-}
-
-function formatDetectionMessage(analysis) {
-  if (analysis.isLikelyJobPost) {
-    const parts = ["Likely job posting"];
-    if (analysis.title) {
-      parts.push(`— ${analysis.title}`);
-    }
-    if (analysis.company) {
-      parts.push(`at ${analysis.company}`);
-    }
-    parts.push(`(${analysis.confidence} confidence, DOM only)`);
-    return parts.join(" ");
-  }
-  return "This page may not be a job posting. Open a job detail view, then capture. We only read the visible page — never fetch URLs.";
-}
-
-async function analyzeActiveTab(tabId) {
+async function sendBackgroundMessage(message) {
   return new Promise((resolve) => {
-    chrome.runtime.sendMessage({ type: "analyze-job-page", tabId }, (response) => {
+    chrome.runtime.sendMessage(message, (response) => {
       if (chrome.runtime.lastError) {
-        resolve(null);
+        resolve({ ok: false, error: chrome.runtime.lastError.message });
         return;
       }
-      resolve(response?.ok ? response.result : null);
+      resolve(response ?? { ok: false });
     });
   });
 }
 
-async function init() {
-  const tab = await getActiveTab();
-  if (!tab?.id || !tab.url) {
-    setStatus("No active tab to capture.", "error");
-    captureBtn.disabled = true;
-    return;
-  }
-
-  if (tab.url.startsWith("chrome://") || tab.url.startsWith("chrome-extension://")) {
-    setStatus("Open a job posting page first.", "error");
-    captureBtn.disabled = true;
-    return;
-  }
-
-  pageUrlEl.textContent = tab.url;
-  setStatus("Checking if this page looks like a job posting…");
-
-  const analysis = await analyzeActiveTab(tab.id);
-  if (analysis) {
-    setStatus(formatDetectionMessage(analysis), analysis.isLikelyJobPost ? "success" : "default");
-    if (!analysis.isLikelyJobPost && analysis.textLength < 100) {
-      captureBtn.disabled = false;
-    }
-  } else {
-    setStatus("Ready to capture. We read this tab's DOM only — never fetch job URLs.");
-  }
+async function checkApiHealthFromSettings() {
+  const settings = await getExtensionSettings();
+  const response = await sendBackgroundMessage({
+    type: "check-api-health",
+    apiBaseUrl: settings.apiBaseUrl,
+  });
+  return Boolean(response?.healthy);
 }
 
-captureBtn.addEventListener("click", async () => {
-  const tab = await getActiveTab();
-  if (!tab?.id) {
-    setStatus("No active tab.", "error");
-    return;
-  }
-
-  captureBtn.disabled = true;
-  setStatus("Reading page text and structuring job fields…");
-
-  chrome.runtime.sendMessage({ type: "run-capture-pipeline", tabId: tab.id }, (response) => {
-    captureBtn.disabled = false;
-
-    if (chrome.runtime.lastError) {
-      setStatus(chrome.runtime.lastError.message, "error");
+openPanelBtn.addEventListener("click", () => {
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    const tab = tabs[0];
+    if (!tab?.id) {
       return;
     }
-
-    if (!response?.ok) {
-      setStatus(response?.error || "Capture failed", "error");
-      return;
-    }
-
-    const { preview, existingJob } = response.result;
-    let message = `Captured ${preview.title} at ${preview.company}. Review tab opened.`;
-    if (existingJob) {
-      message += ` Note: this URL is already saved as "${existingJob.title}".`;
-    }
-    setStatus(message, "success");
+    openSidePanelFromUserGesture(tab, "/").then(() => window.close());
   });
 });
 
@@ -104,4 +43,4 @@ optionsBtn.addEventListener("click", () => {
   chrome.runtime.openOptionsPage();
 });
 
-init();
+checkApiHealthFromSettings().then(setApiStatus);

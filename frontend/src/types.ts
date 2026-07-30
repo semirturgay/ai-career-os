@@ -151,6 +151,7 @@ export interface JobCreate {
   description: string;
   location?: string;
   url?: string;
+  source?: string;
   raw_metadata?: Record<string, unknown> | null;
   profile_id?: string;
 }

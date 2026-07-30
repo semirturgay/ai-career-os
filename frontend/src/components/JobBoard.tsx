@@ -7,6 +7,8 @@ import {
   recommendationVariant,
   scoreFromResult,
 } from "../lib/matches";
+import { useEmbeddedMode } from "../hooks/useEmbeddedMode";
+import { IS_EXTENSION } from "../lib/extensionRuntime";
 import { Badge, Button } from "./ui";
 import { ScoreRing } from "./ScoreRing";
 
@@ -16,18 +18,128 @@ interface JobBoardProps {
   profileId: string;
 }
 
+function scoreAccentClass(score: number | null): string {
+  if (score == null) return "border-l-border";
+  if (score >= 70) return "border-l-success";
+  if (score >= 40) return "border-l-warning";
+  return "border-l-danger/70";
+}
+
+function CompanyMark({ name }: { name: string }) {
+  const letter = name.trim().charAt(0).toUpperCase() || "?";
+  return (
+    <span
+      className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-sm font-semibold text-accent"
+      aria-hidden
+    >
+      {letter}
+    </span>
+  );
+}
+
+interface JobOpportunityCardProps {
+  job: Job;
+  analysis: MatchAnalysis | undefined;
+  compact: boolean;
+  rank: number;
+}
+
+function JobOpportunityCard({ job, analysis, compact, rank }: JobOpportunityCardProps) {
+  const pending = analysis?.status === "pending";
+  const failed = analysis?.status === "failed";
+  const score = hasMatchResult(analysis) ? scoreFromResult(analysis?.result) : null;
+  const rec = hasMatchResult(analysis) ? analysis?.result?.recommendation : undefined;
+  const recLabel = recommendationLabel(rec);
+  const summary = hasMatchResult(analysis) ? analysis?.result?.summary : null;
+
+  return (
+    <li>
+      <Link
+        to={`/jobs/${job.id}`}
+        className={`group block rounded-xl border border-border bg-surface-raised transition hover:border-accent/30 hover:shadow-sm ${
+          compact ? "border-l-[3px] p-3" : "border-l-4 p-4"
+        } ${scoreAccentClass(score)}`}
+      >
+        <div className="flex items-start gap-3">
+          <CompanyMark name={job.company} />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                {compact && rank === 1 && score != null && score >= 70 && (
+                  <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent">
+                    Top match
+                  </p>
+                )}
+                <p className="truncate font-semibold leading-snug text-text group-hover:text-accent">
+                  {job.title}
+                </p>
+                <p className="mt-0.5 truncate text-sm text-text-muted">
+                  {job.company}
+                  {job.location ? ` · ${job.location}` : ""}
+                </p>
+              </div>
+              <div className="shrink-0 pt-0.5">
+                {pending ? (
+                  <span className="flex size-10 flex-col items-center justify-center rounded-full border border-accent/30 bg-accent/5">
+                    <span className="size-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+                  </span>
+                ) : failed ? (
+                  <span className="flex size-10 items-center justify-center rounded-full border border-danger/30 bg-danger/10 text-xs font-semibold text-danger">
+                    !
+                  </span>
+                ) : (
+                  <ScoreRing score={score} size="sm" label="" />
+                )}
+              </div>
+            </div>
+
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {pending ? (
+                <Badge variant="info">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="size-1.5 animate-pulse rounded-full bg-accent" />
+                    Analyzing…
+                  </span>
+                </Badge>
+              ) : failed ? (
+                <Badge variant="danger">Analysis failed</Badge>
+              ) : recLabel ? (
+                <Badge variant={recommendationVariant(rec)}>{recLabel}</Badge>
+              ) : (
+                <Badge variant="default">Not analyzed</Badge>
+              )}
+              {job.source && compact && (
+                <span className="truncate text-[11px] text-text-muted">via {job.source}</span>
+              )}
+            </div>
+
+            {summary && !pending && (
+              <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-text-muted">{summary}</p>
+            )}
+          </div>
+        </div>
+      </Link>
+    </li>
+  );
+}
+
 export function JobBoard({ jobs, analyses, profileId }: JobBoardProps) {
+  const embedded = useEmbeddedMode();
+
   if (jobs.length === 0) {
     return (
-      <div className="flex flex-col items-center rounded-xl border border-dashed border-border bg-surface-raised px-6 py-16 text-center">
-        <p className="text-4xl">💼</p>
-        <h3 className="mt-4 text-lg font-semibold">No jobs yet</h3>
-        <p className="mt-2 max-w-sm text-sm text-text-muted">
-          Paste any job description with all details — we&apos;ll extract fields and run explainable
-          match analysis against your profile.
+      <div className="flex flex-col items-center rounded-xl border border-dashed border-border bg-surface-raised px-5 py-12 text-center">
+        <p className="text-3xl" aria-hidden>
+          💼
         </p>
-        <Link to="/jobs/new" className="mt-6">
-          <Button>Add your first job</Button>
+        <h3 className="mt-3 text-base font-semibold">No opportunities yet</h3>
+        <p className="mt-2 max-w-xs text-sm leading-relaxed text-text-muted">
+          {IS_EXTENSION
+            ? "Capture a job from the tab you're viewing, or paste a description on Add job."
+            : "Paste a job description — we'll extract fields and run explainable match analysis."}
+        </p>
+        <Link to="/jobs/new" className="mt-5">
+          <Button>{IS_EXTENSION ? "Paste a job" : "Add your first job"}</Button>
         </Link>
       </div>
     );
@@ -40,63 +152,16 @@ export function JobBoard({ jobs, analyses, profileId }: JobBoardProps) {
   });
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-surface-raised">
-      <div className="hidden grid-cols-[1fr_auto_auto_auto] gap-4 border-b border-border px-5 py-3 text-xs font-medium uppercase tracking-wide text-text-muted md:grid">
-        <span>Role</span>
-        <span className="text-center">Match</span>
-        <span className="text-center">Verdict</span>
-        <span />
-      </div>
-      <ul className="divide-y divide-border">
-        {sorted.map((job) => {
-          const analysis = latestAnalysisForJob(analyses, profileId, job.id);
-          const pending = analysis?.status === "pending";
-          const score = hasMatchResult(analysis) ? scoreFromResult(analysis?.result) : null;
-          const rec = hasMatchResult(analysis) ? analysis?.result?.recommendation : undefined;
-          const recLabel = recommendationLabel(rec);
-
-          return (
-            <li key={job.id}>
-              <Link
-                to={`/jobs/${job.id}`}
-                className="grid grid-cols-1 items-center gap-4 px-5 py-4 transition hover:bg-surface-overlay md:grid-cols-[1fr_auto_auto_auto]"
-              >
-                <div className="min-w-0">
-                  <p className="truncate font-medium">{job.title}</p>
-                  <p className="truncate text-sm text-text-muted">
-                    {job.company}
-                    {job.location ? ` · ${job.location}` : ""}
-                  </p>
-                </div>
-                <div className="flex md:justify-center">
-                  {pending ? (
-                    <Badge variant="info">
-                      <span className="inline-flex items-center gap-1.5">
-                        <span className="size-1.5 animate-pulse rounded-full bg-accent" />
-                        Analyzing…
-                      </span>
-                    </Badge>
-                  ) : analysis?.status === "failed" ? (
-                    <Badge variant="danger">Failed</Badge>
-                  ) : (
-                    <ScoreRing score={score} size="sm" label="" />
-                  )}
-                </div>
-                <div className="flex md:justify-center">
-                  {recLabel ? (
-                    <Badge variant={recommendationVariant(rec)}>{recLabel}</Badge>
-                  ) : (
-                    <span className="text-sm text-text-muted">Not analyzed</span>
-                  )}
-                </div>
-                <div className="hidden md:flex md:justify-end">
-                  <span className="text-sm text-accent">View →</span>
-                </div>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
+    <ul className={`grid gap-2.5 ${embedded ? "" : "sm:gap-3"}`}>
+      {sorted.map((job, index) => (
+        <JobOpportunityCard
+          key={job.id}
+          job={job}
+          analysis={latestAnalysisForJob(analyses, profileId, job.id)}
+          compact={embedded}
+          rank={index + 1}
+        />
+      ))}
+    </ul>
   );
 }

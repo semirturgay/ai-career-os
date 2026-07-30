@@ -38,7 +38,7 @@ Same human-in-the-loop pattern as job intake.
 | Layer | Role |
 |-------|------|
 | **Popup** | Quick capture + page detection status |
-| **Side panel** | Full app UI (pipeline, match, research, settings) — embed existing React |
+| **Side panel** | Full app UI (pipeline, match, research, settings) — bundled React build |
 | **Service worker** | Inject scripts, call **our** API only (`localhost` / configured backend) |
 | **Backend** | LLM structure, match, storage — unchanged |
 

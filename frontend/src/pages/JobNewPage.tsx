@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
+import { IS_EXTENSION } from "../lib/extensionRuntime";
 import { JobIntakeSteps } from "../components/JobIntakeSteps";
 import { JobPasteZone } from "../components/JobPasteZone";
 import { Layout } from "../components/Layout";
@@ -26,7 +27,14 @@ export function JobNewPage() {
   }
 
   return (
-    <Layout title="Add job" subtitle="Paste a job description — we extract fields and analyze your fit">
+    <Layout
+      title="Add job"
+      subtitle={
+        IS_EXTENSION
+          ? "Capture from the tab above, or paste a description below"
+          : "Paste a job description — we extract fields and analyze your fit"
+      }
+    >
       <div className="mx-auto max-w-2xl space-y-8">
         <JobIntakeSteps current={1} />
 

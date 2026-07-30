@@ -255,6 +255,8 @@ function urlLooksLikeJobPosting(urlString) {
  * Heuristic only — reads current DOM, never fetches URLs.
  * Used to guide the user before capture.
  */
+const TEXT_SAMPLE_MAX = 3000;
+
 function detectJobPage() {
   const url = window.location.href;
   const source = detectJobSource(url);
@@ -279,12 +281,14 @@ function detectJobPage() {
   let title = "";
   let company = "";
   let textLength = 0;
+  let textSample = "";
 
   try {
     const capture = extractJobPage(url);
     title = capture.title || "";
     company = capture.company || "";
     textLength = capture.text?.length || 0;
+    textSample = capture.text ? capture.text.slice(0, TEXT_SAMPLE_MAX) : "";
 
     if (title) {
       score += 15;
@@ -321,6 +325,8 @@ function detectJobPage() {
     title,
     company,
     textLength,
+    textSample,
+    pageTitle: document.title || "",
     url: resolveCaptureUrl(url),
   };
 }

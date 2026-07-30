@@ -1,23 +1,22 @@
 {
   "manifest_version": 3,
-  "name": "AI Career OS — Job Capture",
-  "version": "0.1.1",
-  "description": "Capture job postings from your browser into AI Career OS for explainable match analysis.",
-  "permissions": ["activeTab", "storage", "tabs", "scripting"],
+  "name": "AI Career OS",
+  "version": "0.3.1",
+  "description": "Explainable job matching in your browser — capture jobs from the page DOM, review, and analyze fit.",
+  "permissions": ["activeTab", "storage", "tabs", "scripting", "sidePanel"],
   "host_permissions": [
     "http://127.0.0.1:8000/*",
     "http://localhost:8000/*",
-    "http://localhost:5173/*",
-    "http://127.0.0.1:5173/*",
-    "https://*/*",
-    "http://*/*"
+    "https://*/*"
   ],
   "background": {
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "Capture job to AI Career OS",
-    "default_popup": "popup/popup.html"
+    "default_title": "Open AI Career OS"
+  },
+  "side_panel": {
+    "default_path": "app/index.html"
   },
   "options_page": "options/options.html"
 }

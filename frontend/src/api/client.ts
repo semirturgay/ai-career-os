@@ -1,7 +1,6 @@
 import type { CompanyBrief, CoverLetterResult, Job, JobCreate, JobCreateResponse, JobIntakeHandoff, JobParseResult, MatchAnalysis, Profile, ProfileCreate, ResumeOptimizationResult, ResumeParseResult, ResumeSuggestion } from "../types";
 import type { AppSettings, ListModelsRequest, ModelListResponse, SettingsUpdate } from "../types/settings";
-
-const BASE = "/api/v1";
+import { getApiBase } from "../lib/extensionRuntime";
 
 class ApiError extends Error {
   status: number;
@@ -19,7 +18,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     headers.set("Content-Type", "application/json");
   }
 
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetch(`${getApiBase()}${path}`, {
     ...options,
     headers,
   });
@@ -62,7 +61,7 @@ export const api = {
       });
     },
     downloadResumePdf: async (id: string) => {
-      const res = await fetch(`${BASE}/profiles/${id}/resume.pdf`);
+      const res = await fetch(`${getApiBase()}/profiles/${id}/resume.pdf`);
       if (!res.ok) {
         let message = res.statusText;
         try {

@@ -150,28 +150,36 @@ uv run uvicorn app.main:app --reload
 API: http://127.0.0.1:8000  
 OpenAPI docs: http://127.0.0.1:8000/docs
 
-### 4. Frontend
+### 4. Frontend (optional — web app dev)
 
-Start the backend first (step 3), then:
+For standalone browser dev or UI work. **The Chrome extension bundles its own UI** — you do not need this for normal extension use.
 
 ```bash
 cd frontend
 bun install
-bun run dev
+bun run dev          # standalone web app at http://127.0.0.1:5173
+bun run build:extension   # bundle React into extension/app/
 ```
 
-`bun run dev` fetches `http://127.0.0.1:8000/openapi.json` and writes gitignored `src/types/api.generated.ts`. Hand-maintained types in `types.ts` remain the default in app code.
+`bun run dev` fetches `http://127.0.0.1:8000/openapi.json` and writes gitignored `src/types/api.generated.ts`.
 
-App: http://127.0.0.1:5173
+### 5. Chrome extension
 
-### 5. First run
+1. Backend running (step 3).
+2. `cd frontend && bun run build:extension`
+3. Chrome → `chrome://extensions` → **Load unpacked** → [`extension/`](extension/)
+4. Settings → API `http://127.0.0.1:8000`
 
-1. Open the app → choose **Local** (LM Studio) or a cloud provider
-2. Upload a PDF resume
+Re-run `build:extension` after frontend changes, then reload the extension.
+
+### 6. First run
+
+1. Open extension side panel → choose **Local** (LM Studio) or a cloud provider
+2. Upload a PDF resume (or paste — coming soon)
 3. Wait for extraction (local models can take 30–60s)
 4. Review structured fields → save profile
-5. Add a job — **Chrome extension capture** (see below) or paste in app → review → **Save & analyze match**
-6. View ranked pipeline on home; open job detail for match, research, resume, cover letter
+5. On a job page → **Capture & review in panel** → confirm → **Save & analyze match**
+6. View ranked pipeline; open job detail for match, research, resume, cover letter
 
 > **Note:** Use `127.0.0.1` instead of `localhost` for API URLs on macOS — the Vite proxy and DB URL are configured this way to avoid IPv6 hangs.
 
@@ -196,10 +204,11 @@ Policy: [docs/intake-policy.md](docs/intake-policy.md) · Architecture: [docs/ex
 
 ### Install (development)
 
-1. Complete [Quick start](#quick-start) steps 1–4 (backend + frontend running).
-2. Chrome → `chrome://extensions` → enable **Developer mode**.
-3. **Load unpacked** → select the [`extension/`](extension/) folder.
-4. Open extension **Settings** → API `http://127.0.0.1:8000`, app `http://localhost:5173`.
+1. Complete [Quick start](#quick-start) steps 1–3 (backend running).
+2. `cd frontend && bun run build:extension`
+3. Chrome → `chrome://extensions` → enable **Developer mode**.
+4. **Load unpacked** → select the [`extension/`](extension/) folder.
+5. Extension **Settings** → API `http://127.0.0.1:8000`.
 
 ### Capture flow
 
@@ -209,21 +218,21 @@ sequenceDiagram
     participant Tab as Job board tab
     participant Ext as Extension
     participant API as AI Career OS API
-    participant App as Web app review
+    participant App as Side panel (bundled React)
 
     User->>Tab: Opens job posting
     User->>Ext: Capture and review
     Ext->>Tab: Inject script read DOM
     Ext->>API: POST /jobs/parse-text
     Ext->>API: POST /jobs/intake-handoff
-    Ext->>App: Open /jobs/new/review?handoff=…
+    Ext->>App: Open side panel → review route
     User->>App: Confirm fields Save and analyze
     API->>API: Background match analysis
 ```
 
 1. Open a page that shows a job posting (make sure the full description is visible on screen).
 2. Extension popup → **likely job posting** detection (URL + DOM heuristics — no network fetch).
-3. **Capture & review** → opens web app review with extracted fields.
+3. **Capture & review in panel** → opens side panel with extracted fields.
 4. **Save & analyze match** — same human-in-the-loop flow as paste intake.
 
 ### How capture works
@@ -247,9 +256,7 @@ We do **not** integrate with, fetch from, or endorse any third-party site. We on
 
 ### Coming next
 
-- Side panel with embedded React app (extension as primary UI)
-- Paste resume intake in extension
-- Capture opens side panel instead of a new tab
+- Paste resume intake in extension side panel
 
 ---
 
@@ -433,7 +440,7 @@ Details: [docs/milestones/](docs/milestones/README.md) · Current state: [docs/p
 |-----|----------|
 | [docs/intake-policy.md](docs/intake-policy.md) | **DOM/paste only — no third-party job fetch** |
 | [docs/extension.md](docs/extension.md) | Chrome extension principles and architecture |
-| [extension/README.md](extension/README.md) | Load unpacked, capture flow, supported boards |
+| [extension/README.md](extension/README.md) | Load unpacked, capture flow, side panel |
 | [docs/ai-engineering.md](docs/ai-engineering.md) | Evals, tracing, structured outputs, patterns |
 | [docs/vision.md](docs/vision.md) | Long-term product vision |
 | [docs/architecture.md](docs/architecture.md) | System design and data model |

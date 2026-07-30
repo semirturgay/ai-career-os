@@ -16,6 +16,8 @@ from app.schemas import (
     JobCreateRead,
     JobIntakeHandoffCreate,
     JobIntakeHandoffRead,
+    JobPageClassification,
+    JobPageClassifyRequest,
     JobParseRead,
     JobParseRequest,
     JobRead,
@@ -23,6 +25,7 @@ from app.schemas import (
 )
 from app.services.company_research import company_brief_to_storage, research_company
 from app.services.job_intake_handoff import create_handoff, get_handoff
+from app.services.job_page_classifier import classify_job_page
 from app.services.job_paste_parser import prepare_job_post_text
 from app.services.job_structurer import structure_job
 from app.services.match import run_match_analysis
@@ -100,7 +103,22 @@ async def parse_job_text(body: JobParseRequest, db: AsyncSession = Depends(get_d
     )
     return JobParseRead(job_text=job_text, structured_data=extraction)
 
-    return JobParseRead(job_text=job_text, structured_data=extraction)
+
+@router.post("/jobs/classify-page", response_model=JobPageClassification)
+async def classify_job_page_endpoint(
+    body: JobPageClassifyRequest, db: AsyncSession = Depends(get_db)
+):
+    logger.info(
+        "Classifying page sample (%d chars, url=%s)",
+        len(body.text_sample),
+        "yes" if body.url else "no",
+    )
+    return await classify_job_page(
+        db,
+        body.text_sample,
+        url=body.url,
+        page_title=body.page_title,
+    )
 
 
 @router.get("/jobs/by-url", response_model=JobByUrlRead)
