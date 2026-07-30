@@ -1,6 +1,6 @@
 // AI Career OS extension API client.
 // ALLOWED: fetch() to our backend (apiBaseUrl) only.
-// FORBIDDEN: fetch() to job boards, LinkedIn, or any third-party URL for content.
+// FORBIDDEN: fetch() to any third-party URL for job/resume content.
 // Job text comes from DOM injection — see docs/intake-policy.md
 
 async function apiRequest(apiBaseUrl, path, options = {}) {

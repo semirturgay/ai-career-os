@@ -14,7 +14,7 @@ This applies to the Chrome extension, backend job/resume intake, and any future 
 
 ## Forbidden
 
-- `fetch()`, `httpx`, or hidden tabs to load LinkedIn, Greenhouse, Lever, or any job board URL
+- `fetch()`, `httpx`, or hidden tabs to load any third-party job or careers page URL
 - Background crawlers, scrapers, or “import from URL” features for job postings
 - Proxy services that fetch job pages on the user’s behalf
 - Prefetching job content when the user has not opened that page

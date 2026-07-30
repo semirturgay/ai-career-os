@@ -54,7 +54,7 @@ Long-term vision: an autonomous career assistant that discovers jobs, explains f
 - **Model picker** — fetches available models from your provider
 - **Human review** — edit extracted fields before saving (resume and job)
 - **Job intake wizard** — paste description → extract → review → save with automatic match
-- **Chrome extension (M7)** — capture job postings from the page you’re viewing (Greenhouse, Lever, LinkedIn, or generic); auto-detect job pages; review in app
+- **Chrome extension (M7)** — capture job text from whatever page you’re viewing (DOM only); auto-detect job pages; review in app
 - **RAG-backed match** — retrieves relevant resume chunks before full analysis
 - **Job pipeline** — home dashboard ranks jobs by match score with polling
 - **Job detail tabs** — match, company research, resume optimization, cover letter (after full analysis)
@@ -190,7 +190,7 @@ uv run alembic upgrade head
 
 ## Chrome extension
 
-Capture jobs where you already browse them — LinkedIn, Greenhouse, Lever, or any careers page. The extension reads the **active tab DOM only**; it never `fetch()`es job board URLs.
+Capture job text from **whatever page you have open**. The extension reads the active tab DOM only — no integrations, no fetching third-party URLs.
 
 Policy: [docs/intake-policy.md](docs/intake-policy.md) · Architecture: [docs/extension.md](docs/extension.md) · Install details: [extension/README.md](extension/README.md)
 
@@ -221,19 +221,21 @@ sequenceDiagram
     API->>API: Background match analysis
 ```
 
-1. Open a job posting (on LinkedIn search, **click a job** so the detail panel is visible).
-2. Extension popup → **likely job posting** detection (URL + DOM — no third-party fetch).
+1. Open a page that shows a job posting (make sure the full description is visible on screen).
+2. Extension popup → **likely job posting** detection (URL + DOM heuristics — no network fetch).
 3. **Capture & review** → opens web app review with extracted fields.
 4. **Save & analyze match** — same human-in-the-loop flow as paste intake.
 
-### Supported boards
+### How capture works
 
-| Source | Notes |
-|--------|--------|
-| **Greenhouse** | `*.greenhouse.io` |
-| **Lever** | `*.lever.co` |
-| **LinkedIn** | Search detail panel or `/jobs/view/{id}` |
-| **Other** | Generic main-content fallback |
+| Step | What happens |
+|------|----------------|
+| **Read DOM** | Inject script into the active tab; extract visible text (title, company, description when present in the page) |
+| **Detect** | Heuristics on URL + DOM — is this likely a job posting? |
+| **Structure** | Send text to our API → LLM `JobExtraction` |
+| **Review** | Hand off to web app; you confirm before save |
+
+We do **not** integrate with, fetch from, or endorse any third-party site. We only read what is already rendered in your browser.
 
 ### Extension API calls (our backend only)
 
@@ -413,7 +415,7 @@ Full interactive docs: http://127.0.0.1:8000/docs
 | **M5** Cover letter | Done | 3-pass cover letter chain on job detail |
 | **M6** Company research | Done | Bounded agent loop + web search + source-grounded brief |
 | **M7** Chrome extension | **In progress** | DOM-only job capture, auto-detect, extension-first intake |
-| — | Planned | Side panel UI, paste resume, LinkedIn/Ashby polish |
+| — | Planned | Side panel UI, paste resume, richer DOM heuristics |
 
 Details: [docs/milestones/](docs/milestones/README.md) · Current state: [docs/project-status.md](docs/project-status.md)
 

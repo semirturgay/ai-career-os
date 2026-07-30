@@ -96,7 +96,7 @@ async function runCapturePipeline(tabId) {
 
   if (!capture.text || capture.text.length < 100) {
     throw new Error(
-      "Not enough job text on this page (need at least 100 characters). On LinkedIn, click a job in the list so the detail panel is visible.",
+      "Not enough job text on this page (need at least 100 characters). Open a page where the full job description is visible, then try again.",
     );
   }
 
