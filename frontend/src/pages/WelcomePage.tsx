@@ -57,8 +57,8 @@ export function WelcomePage() {
           <section className="rounded-xl border border-accent/20 bg-accent/5 px-4 py-4">
             <p className="text-sm font-medium text-text">First-time setup</p>
             <p className="mt-1 text-xs leading-relaxed text-text-muted">
-              Connect your AI provider and add your resume once (~2 min). After that, capture jobs
-              from any tab and review matches here.
+              Connect your AI provider and add your resume once (~2 min). Paste text or upload
+              a PDF — after that, capture jobs from any tab and review matches here.
             </p>
             <Link to="/onboarding/ai" className="mt-4 block">
               <Button className="w-full py-2.5 text-sm font-semibold">Set up your profile</Button>

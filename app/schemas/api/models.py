@@ -42,6 +42,10 @@ class ResumeParseRead(BaseModel):
     structured_data: ResumeExtraction | None = None
 
 
+class ResumeParseRequest(BaseModel):
+    text: str = Field(min_length=100, max_length=100_000)
+
+
 class JobCreate(BaseModel):
     title: str = Field(min_length=1, max_length=500)
     company: str = Field(min_length=1, max_length=255)

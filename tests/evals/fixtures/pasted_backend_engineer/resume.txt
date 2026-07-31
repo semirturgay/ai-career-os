@@ -1,0 +1,49 @@
+<div class="resume-export">
+  <section>
+    <h2>Contact</h2>
+    <p>jane.doe@example.com</p>
+    <p>+1 555 010 2000</p>
+  </section>
+  <section>
+    <h1>Jane Doe</h1>
+    <p>Senior Backend Engineer | Python, FastAPI, PostgreSQL</p>
+  </section>
+  <section>
+    <h3>Skills</h3>
+    <ul>
+      <li>Python</li>
+      <li>FastAPI</li>
+      <li>PostgreSQL</li>
+      <li>Docker</li>
+      <li>REST APIs</li>
+    </ul>
+  </section>
+  <section>
+    <h3>Summary</h3>
+    <p>Backend engineer with 8 years building APIs and data services for product teams.</p>
+  </section>
+  <section>
+    <h3>Experience</h3>
+    <div>
+      <h4>Acme Corp — Senior Backend Engineer</h4>
+      <p>January 2020 - Present · San Francisco, CA</p>
+      <ul>
+        <li>Designed REST and GraphQL APIs serving 2M daily requests.</li>
+        <li>Led migration from monolith to FastAPI microservices.</li>
+        <li>Improved p95 latency by 40% through query optimization.</li>
+      </ul>
+    </div>
+    <div>
+      <h4>Globex Inc — Software Engineer</h4>
+      <p>June 2016 - December 2019 · Remote</p>
+      <ul>
+        <li>Built internal tooling in Python and PostgreSQL.</li>
+        <li>Introduced CI/CD pipelines with GitHub Actions.</li>
+      </ul>
+    </div>
+  </section>
+  <section>
+    <h3>Education</h3>
+    <p>State University — B.S. Computer Science (2012 - 2016)</p>
+  </section>
+</div>

@@ -14,6 +14,7 @@ from app.schemas.api.models import (
     ProfileRead,
     ProfileUpdate,
     ResumeParseRead,
+    ResumeParseRequest,
 )
 from app.schemas.company_research import CompanyBrief as CompanyBrief
 from app.schemas.cover_letter import CoverLetterResult as CoverLetterResult
@@ -44,4 +45,5 @@ __all__ = [
     "ProfileUpdate",
     "ResumeOptimizationResult",
     "ResumeParseRead",
+    "ResumeParseRequest",
 ]

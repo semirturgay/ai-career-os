@@ -56,4 +56,4 @@ The extension **never** `fetch()`es external career-site URLs.
 
 ## Coming next
 
-- Paste resume intake in side panel (`POST /profiles/parse-text`)
+- Paste resume intake in side panel (`POST /profiles/parse-text`) — **done**

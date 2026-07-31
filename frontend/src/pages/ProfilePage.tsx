@@ -3,15 +3,18 @@ import { useNavigate } from "react-router-dom";
 import type { ResumeParseResult } from "../types";
 import { Layout } from "../components/Layout";
 import { parseStructuredData, StructuredProfileView } from "../components/StructuredProfileView";
+import { ResumePasteZone } from "../components/ResumePasteZone";
 import { ResumeUploadZone } from "../components/ResumeUploadZone";
 import { useProfileRoute } from "../components/RequireProfileLayout";
+import { useEmbeddedMode } from "../hooks/useEmbeddedMode";
 import { api } from "../api/client";
 import { Button, ErrorBanner } from "../components/ui";
 
 export function ProfilePage() {
   const navigate = useNavigate();
   const { profile } = useProfileRoute();
-  const [showUpload, setShowUpload] = useState(false);
+  const embedded = useEmbeddedMode();
+  const [showReplace, setShowReplace] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
 
@@ -63,21 +66,32 @@ export function ProfilePage() {
               <Button variant="secondary" onClick={handleDownloadPdf} loading={downloading}>
                 Download PDF
               </Button>
-              <Button variant="secondary" onClick={() => setShowUpload((v) => !v)}>
-                {showUpload ? "Cancel upload" : "Upload new resume"}
+              <Button variant="secondary" onClick={() => setShowReplace((v) => !v)}>
+                {showReplace ? "Cancel" : "Update resume"}
               </Button>
             </div>
           </div>
         </section>
 
-        {showUpload && (
-          <section className="rounded-xl border border-accent/30 bg-accent/5 p-6">
-            <h3 className="mb-4 font-semibold">Replace resume</h3>
-            <p className="mb-4 text-sm text-text-muted">
-              Upload a new PDF — we&apos;ll re-extract structured fields for you to review before
-              updating.
+        {showReplace && (
+          <section className="rounded-xl border border-accent/30 bg-accent/5 p-4 sm:p-6">
+            <h3 className="font-semibold">Replace resume</h3>
+            <p className="mt-2 mb-4 text-sm text-text-muted">
+              Paste updated resume text or upload a PDF — we&apos;ll re-extract structured fields
+              for you to review before saving.
             </p>
-            <ResumeUploadZone onParsed={handleParsed} compact />
+            <ResumePasteZone onParsed={handleParsed} compact={embedded} />
+            <div className="relative my-5">
+              <div className="absolute inset-0 flex items-center" aria-hidden>
+                <div className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center">
+                <span className="bg-accent/5 px-3 text-xs font-medium uppercase tracking-wider text-text-muted">
+                  or upload PDF
+                </span>
+              </div>
+            </div>
+            <ResumeUploadZone onParsed={handleParsed} compact={embedded} />
           </section>
         )}
 
@@ -88,11 +102,11 @@ export function ProfilePage() {
         ) : (
           <section className="rounded-xl border border-dashed border-border bg-surface-raised p-8 text-center">
             <p className="text-text-muted">
-              No structured resume data yet. Upload a PDF to extract skills, experience, and
-              education.
+              No structured resume data yet. Paste your resume or upload a PDF to extract skills,
+              experience, and education.
             </p>
-            <Button className="mt-4" onClick={() => setShowUpload(true)}>
-              Upload resume
+            <Button className="mt-4" onClick={() => setShowReplace(true)}>
+              Add resume
             </Button>
           </section>
         )}

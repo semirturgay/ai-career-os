@@ -15,10 +15,12 @@ from app.schemas import (
     ProfileRead,
     ProfileUpdate,
     ResumeParseRead,
+    ResumeParseRequest,
 )
 from app.services.rag.indexing import index_profile_chunks
 from app.services.rag.retrieval import get_embedding_provider
 from app.services.resume_parser import extract_text_from_pdf
+from app.services.resume_paste_parser import prepare_resume_text
 from app.services.resume_pdf_export import (
     build_profile_resume_pdf,
     content_disposition_attachment,
@@ -80,6 +82,28 @@ async def parse_resume(
     logger.info(
         "Structured %s — name=%r, skills=%d, experience=%d",
         filename,
+        extraction.name,
+        len(extraction.skills),
+        len(extraction.experience),
+    )
+    return ResumeParseRead(
+        name=extraction.name,
+        headline=extraction.headline,
+        resume_text=resume_text,
+        structured_data=extraction,
+    )
+
+
+@router.post("/profiles/parse-text", response_model=ResumeParseRead)
+async def parse_resume_text(body: ResumeParseRequest, db: AsyncSession = Depends(get_db)):
+    logger.info("Parsing pasted resume (%d chars)", len(body.text))
+    resume_text = await asyncio.to_thread(prepare_resume_text, body.text)
+
+    logger.info("Structuring pasted resume (%d chars after normalize)", len(resume_text))
+    extraction = await structure_resume(db, resume_text)
+
+    logger.info(
+        "Structured pasted resume — name=%r, skills=%d, experience=%d",
         extraction.name,
         len(extraction.skills),
         len(extraction.experience),

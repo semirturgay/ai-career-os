@@ -13,6 +13,7 @@ from app.schemas.api.models import (
     ProfileRead,
     ProfileUpdate,
     ResumeParseRead,
+    ResumeParseRequest,
 )
 
 __all__ = [
@@ -28,4 +29,5 @@ __all__ = [
     "ProfileRead",
     "ProfileUpdate",
     "ResumeParseRead",
+    "ResumeParseRequest",
 ]

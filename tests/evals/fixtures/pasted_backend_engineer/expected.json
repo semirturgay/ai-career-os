@@ -1,0 +1,11 @@
+{
+  "name_contains": "Jane",
+  "name_not": ["Contact", "Unknown", "Resume"],
+  "min_skills": 3,
+  "must_include_skills": ["Python", "FastAPI"],
+  "min_experience": 2,
+  "experience_companies_contain": ["Acme"],
+  "min_education": 1,
+  "email_contains": "@example.com",
+  "phone_not_empty": true
+}

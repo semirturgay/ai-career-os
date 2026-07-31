@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Layout } from "../components/Layout";
 import { OnboardingSteps } from "../components/OnboardingSteps";
+import { ResumePasteZone } from "../components/ResumePasteZone";
 import { ResumeUploadZone } from "../components/ResumeUploadZone";
 import { Button } from "../components/ui";
 import { IS_EXTENSION } from "../lib/extensionRuntime";
@@ -31,15 +32,25 @@ export function OnboardingPage() {
           <h2 className="text-xl font-semibold sm:text-2xl">Add your resume</h2>
           <p className="mt-2 text-sm text-text-muted">
             {IS_EXTENSION
-              ? "Upload a PDF — we'll extract and structure it with AI so you can review before saving."
-              : "We'll extract and structure your resume with AI so you can review it before saving."}
+              ? "Paste your resume text — we'll structure it with AI so you can review before saving."
+              : "Paste your resume or upload a PDF. We'll structure it with AI so you can review before saving."}
           </p>
         </div>
 
-        <ResumeUploadZone
-          onParsed={(parsed) => void handleParsed(parsed)}
-          compact={IS_EXTENSION}
-        />
+        <ResumePasteZone onParsed={(parsed) => void handleParsed(parsed)} compact={IS_EXTENSION} />
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center" aria-hidden>
+            <div className="w-full border-t border-border" />
+          </div>
+          <div className="relative flex justify-center">
+            <span className="bg-surface px-3 text-xs font-medium uppercase tracking-wider text-text-muted">
+              or upload PDF
+            </span>
+          </div>
+        </div>
+
+        <ResumeUploadZone onParsed={(parsed) => void handleParsed(parsed)} compact={IS_EXTENSION} />
 
         {navigating && (
           <p className="text-center text-xs text-text-muted">Preparing review…</p>

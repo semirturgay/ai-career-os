@@ -92,6 +92,11 @@ export const api = {
         body: form,
       });
     },
+    parseText: (text: string) =>
+      request<ResumeParseResult>("/profiles/parse-text", {
+        method: "POST",
+        body: JSON.stringify({ text }),
+      }),
     downloadResumePdf: async (id: string) => {
       const res = await fetch(`${getApiBase()}/profiles/${id}/resume.pdf`);
       if (!res.ok) {
