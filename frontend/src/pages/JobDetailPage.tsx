@@ -52,7 +52,8 @@ export function JobDetailPage() {
     refreshJob: syncJobInPipeline,
   } = usePipelineSync();
   const pipelineAnalysis = job ? getLatestAnalysisForJob(job.id) : undefined;
-  const { analysis, setAnalysis } = useMatchAnalysis(pipelineAnalysis?.id);
+  const analysisId = pipelineAnalysis?.id ?? intakeRef.current.matchAnalysisId;
+  const { analysis, setAnalysis } = useMatchAnalysis(analysisId);
   const jobAnalyses = job ? getAnalysesForJob(job.id) : [];
   const [analyzing, setAnalyzing] = useState(false);
   const [reExtracting, setReExtracting] = useState(false);

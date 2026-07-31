@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Senior Backend Engineer — FinTech Labs</title>
+    <title>Senior Backend Engineer — RandomishLabs</title>
     <style>
       :root {
         color-scheme: light;
@@ -114,16 +114,88 @@
         font-size: 12px;
         color: var(--muted);
       }
+
+      /* Demo capture overlay — mirrors extension content/capture-overlay.js */
+      .demo-capture-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        background: rgba(255, 255, 255, 0.88);
+        backdrop-filter: blur(6px);
+        overflow: hidden;
+      }
+      .demo-capture-overlay.active {
+        display: block;
+        animation: demo-capture-in 0.25s ease-out;
+      }
+      @keyframes demo-capture-in {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      .demo-capture-beam {
+        position: absolute;
+        inset-y: 0;
+        right: 0;
+        width: 55%;
+        background: linear-gradient(to left, rgba(0, 133, 97, 0.22), rgba(0, 133, 97, 0.04), transparent);
+        pointer-events: none;
+      }
+      .demo-capture-particle {
+        position: absolute;
+        width: 4px;
+        height: 4px;
+        border-radius: 999px;
+        background: #008561;
+        opacity: 0;
+        animation: demo-capture-particle 1.1s ease-in infinite;
+      }
+      @keyframes demo-capture-particle {
+        0% {
+          opacity: 0;
+          transform: translate(0, 0) scale(0.6);
+        }
+        20% {
+          opacity: 0.85;
+        }
+        100% {
+          opacity: 0;
+          transform: translate(180px, -20px) scale(0.2);
+        }
+      }
+      .demo-capture-status {
+        position: absolute;
+        left: 24px;
+        bottom: 28px;
+        right: 24px;
+      }
+      .demo-capture-status p {
+        margin: 0;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #008561;
+      }
+      .demo-capture-status h3 {
+        margin: 8px 0 0;
+        font-size: 18px;
+        color: #15372c;
+      }
     </style>
   </head>
   <body>
     <header class="topbar">
-      <div class="logo">FinTech <span>Labs</span></div>
+      <div class="logo">Randomish<span>Labs</span></div>
       <button class="apply-btn" type="button">Apply for this job</button>
     </header>
 
     <section class="hero">
-      <p class="company">FinTech Labs</p>
+      <p class="company">RandomishLabs</p>
       <h1>Senior Backend Engineer</h1>
       <div class="meta">
         <span>Remote</span>
@@ -167,5 +239,74 @@
         <li>Financial services or payments domain</li>
       </ul>
     </main>
+
+    <div id="demo-capture-overlay" class="demo-capture-overlay" aria-hidden="true">
+      <div class="demo-capture-beam"></div>
+      <div id="demo-capture-particles"></div>
+      <div class="demo-capture-status">
+        <p>Capturing to Career OS</p>
+        <h3 id="demo-capture-status-text">Scanning visible page…</h3>
+      </div>
+    </div>
+
+    <script>
+      const CAPTURE_LINES = [
+        "Scanning visible page…",
+        "Harvesting job details…",
+        "Pulling text into Career OS…",
+        "Structuring fields…",
+      ];
+      let captureTimers = [];
+
+      function clearCaptureTimers() {
+        for (const id of captureTimers) window.clearTimeout(id);
+        captureTimers = [];
+      }
+
+      function spawnParticles() {
+        const host = document.getElementById("demo-capture-particles");
+        host.innerHTML = "";
+        for (let i = 0; i < 16; i += 1) {
+          const dot = document.createElement("span");
+          dot.className = "demo-capture-particle";
+          dot.style.left = `${8 + (i * 5.5) % 72}%`;
+          dot.style.top = `${12 + ((i * 17) % 72)}%`;
+          dot.style.animationDelay = `${(i % 5) * 0.16}s`;
+          dot.style.animationDuration = `${0.95 + (i % 3) * 0.12}s`;
+          host.appendChild(dot);
+        }
+      }
+
+      window.startDemoJobCapture = function startDemoJobCapture(durationMs = 5600) {
+        clearCaptureTimers();
+        const overlay = document.getElementById("demo-capture-overlay");
+        const status = document.getElementById("demo-capture-status-text");
+        overlay.classList.add("active");
+        overlay.setAttribute("aria-hidden", "false");
+        spawnParticles();
+
+        let line = 0;
+        status.textContent = CAPTURE_LINES[line];
+        const lineTimer = window.setInterval(() => {
+          line = (line + 1) % CAPTURE_LINES.length;
+          status.textContent = CAPTURE_LINES[line];
+        }, 1200);
+        captureTimers.push(lineTimer);
+
+        captureTimers.push(
+          window.setTimeout(() => {
+            window.clearInterval(lineTimer);
+            overlay.classList.remove("active");
+            overlay.setAttribute("aria-hidden", "true");
+          }, durationMs),
+        );
+      };
+
+      window.addEventListener("message", (event) => {
+        if (event.data?.type === "demo-capture-start") {
+          window.startDemoJobCapture(event.data.durationMs ?? 5600);
+        }
+      });
+    </script>
   </body>
 </html>

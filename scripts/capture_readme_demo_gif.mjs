@@ -38,7 +38,65 @@ const apiBase = "http://127.0.0.1:8000/api/v1";
 const gifOut = join(outDir, "demo.gif");
 const frameUrl = `http://127.0.0.1:${port}/demo/demo-frame.html`;
 
-const VIEWPORT = { width: 960, height: 720 };
+const VIEWPORT = { width: 1200, height: 780 };
+
+/** Demo pacing — settings actions readable; loading animations ~3s each. */
+const TIMING = {
+  welcomeHoldMs: 1400,
+  aiProviderHoldMs: 1800,
+  aiSelectHoldMs: 900,
+  aiLmStudioHoldMs: 1100,
+  aiContinueHoldMs: 700,
+  uploadHoldMs: 600,
+  reviewHoldMs: 1400,
+  jobReviewHoldMs: 1600,
+  loadingHoldMs: 2800,
+  resumeExtractMockMs: 3200,
+  captureMockMs: 3200,
+  matchSaveDelayMs: 3200,
+  matchResultHoldMs: 2200,
+  matchEvidenceHoldMs: 1800,
+};
+
+const MOCK_MATCH_RESULT = {
+  depth: "full",
+  score: 88.5,
+  recommendation: "apply",
+  strengths: [
+    {
+      point: 9.5,
+      evidence:
+        "8 years of backend engineering experience with Python, FastAPI, and PostgreSQL across Acme Corp and Globex Inc.",
+    },
+    {
+      point: 9.2,
+      evidence:
+        "Designed REST and GraphQL APIs and led a migration to FastAPI microservices at Acme Corp.",
+    },
+    {
+      point: 8.8,
+      evidence: "Demonstrated CI/CD experience through GitHub Actions pipelines at Globex Inc.",
+    },
+  ],
+  gaps: [
+    {
+      point: 4.5,
+      severity: "medium",
+      evidence:
+        "AWS experience is listed as nice-to-have in the job description but is not explicitly mentioned in the resume.",
+    },
+    {
+      point: 3.0,
+      severity: "low",
+      evidence: "Kubernetes production experience is not explicitly listed in the resume.",
+    },
+  ],
+  summary:
+    "Jane Doe is a strong match for this Senior Backend Engineer role. Her Python, FastAPI, PostgreSQL, and API design experience align closely with the core requirements. The main gaps are optional cloud infrastructure technologies that are not explicitly mentioned. Overall, she should apply.",
+};
+
+/** Shared state between Playwright routes and the recording flow. */
+const demoCaptureState = { lastCreatedJobId: null, demoMatchAnalysis: null };
 
 const DEMO_RESUME_TEXT = `Jane Doe
 Senior Backend Engineer | Python, FastAPI, PostgreSQL
@@ -104,7 +162,7 @@ const MOCK_RESUME_PARSE = {
 
 const MOCK_JOB_EXTRACTION = {
   title: "Senior Backend Engineer",
-  company: "FinTech Labs",
+  company: "RandomishLabs",
   work_mode: "remote",
   location: "Remote",
   match_summary:
@@ -233,13 +291,13 @@ async function createCaptureHandoff() {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       job_text:
-        "Senior Backend Engineer\nFinTech Labs\nRemote\n\n" +
+        "Senior Backend Engineer\nRandomishLabs\nRemote\n\n" +
         MOCK_JOB_EXTRACTION.description +
         "\n\nRequirements:\n- " +
         MOCK_JOB_EXTRACTION.requirements.join("\n- "),
       structured_data: MOCK_JOB_EXTRACTION,
       url: `http://127.0.0.1:${port}/demo/job-posting.html`,
-      source: "FinTech Labs",
+      source: "RandomishLabs",
     }),
   });
   if (!res.ok) {
@@ -256,7 +314,7 @@ function installChromeMock(context, { handoffId, jobPageUrl }) {
       const demoTab = {
         id: 42,
         url: demoJobUrl,
-        title: "Senior Backend Engineer — FinTech Labs",
+        title: "Senior Backend Engineer — RandomishLabs",
         active: true,
         windowId: 1,
       };
@@ -314,13 +372,13 @@ function installChromeMock(context, { handoffId, jobPageUrl }) {
                     handoffId: captureHandoffId,
                     preview: {
                       title: "Senior Backend Engineer",
-                      company: "FinTech Labs",
-                      source: "FinTech Labs",
+                      company: "RandomishLabs",
+                      source: "RandomishLabs",
                       url: demoJobUrl,
                     },
                   },
                 });
-              }, 4200);
+              }, 3200);
               return;
             }
             cb?.({ ok: false });
@@ -351,13 +409,123 @@ async function pause(_page, ms) {
   await delay(ms);
 }
 
+async function waitForDemoMatchMock(timeoutMs = 20000) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (demoCaptureState.demoMatchAnalysis && demoCaptureState.lastCreatedJobId) {
+      return;
+    }
+    await delay(100);
+  }
+  throw new Error("Demo match analysis mock was not set — job save intercept failed");
+}
+
+function jobFrame(page) {
+  return page.locator("iframe.job-pane");
+}
+
+async function triggerJobCaptureOverlay(page, durationMs = TIMING.captureMockMs) {
+  await jobFrame(page).evaluate((iframe, ms) => {
+    iframe.contentWindow?.postMessage({ type: "demo-capture-start", durationMs: ms }, "*");
+  }, durationMs);
+}
+
+/** Wait for a loading state title, then hold briefly so the animation reads in the GIF. */
+async function holdLoadingAnimation(panel, titleSnippet, holdMs = TIMING.loadingHoldMs) {
+  await panel.locator(`text=${titleSnippet}`).waitFor({ timeout: 15000 });
+  await delay(holdMs);
+}
+
+function patchMatchAnalysisList(list) {
+  if (!demoCaptureState.demoMatchAnalysis) {
+    return list;
+  }
+  const patched = list.map((item) =>
+    item.id === demoCaptureState.demoMatchAnalysis.id ? demoCaptureState.demoMatchAnalysis : item,
+  );
+  if (!patched.some((item) => item.id === demoCaptureState.demoMatchAnalysis.id)) {
+    patched.unshift(demoCaptureState.demoMatchAnalysis);
+  }
+  return patched;
+}
+
 async function installPanelMocks(context) {
   await context.route("**/profiles/parse-text", async (route) => {
-    await delay(3600);
+    await delay(TIMING.resumeExtractMockMs);
     await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify(MOCK_RESUME_PARSE),
+    });
+  });
+
+  await context.route("**/match-analyses/*", async (route) => {
+    if (route.request().method() !== "GET" || !demoCaptureState.demoMatchAnalysis) {
+      await route.continue();
+      return;
+    }
+    const id = route.request().url().split("/match-analyses/")[1]?.split("?")[0];
+    if (id && id === demoCaptureState.demoMatchAnalysis.id) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(demoCaptureState.demoMatchAnalysis),
+      });
+      return;
+    }
+    await route.continue();
+  });
+
+  await context.route(/\/match-analyses\/?$/, async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.continue();
+      return;
+    }
+    const response = await route.fetch();
+    const list = patchMatchAnalysisList(await response.json());
+    await route.fulfill({
+      status: response.status(),
+      headers: response.headers(),
+      contentType: "application/json",
+      body: JSON.stringify(list),
+    });
+  });
+
+  await context.route(/\/jobs\/?$/, async (route) => {
+    if (route.request().method() !== "POST") {
+      await route.continue();
+      return;
+    }
+    demoCaptureState.lastCreatedJobId = null;
+    demoCaptureState.demoMatchAnalysis = null;
+    const postBody = route.request().postDataJSON();
+    let profileId = postBody?.profile_id;
+    if (!profileId) {
+      const profiles = await (await fetch(`${apiBase}/profiles`)).json();
+      profileId = profiles[0]?.id;
+    }
+    const response = await route.fetch();
+    const json = await response.json();
+    demoCaptureState.lastCreatedJobId = json.id ?? null;
+    if (json.match_analysis_id && profileId) {
+      const now = new Date().toISOString();
+      demoCaptureState.demoMatchAnalysis = {
+        id: String(json.match_analysis_id),
+        profile_id: String(profileId),
+        job_id: String(json.id),
+        status: "completed",
+        result: MOCK_MATCH_RESULT,
+        error: null,
+        created_at: now,
+        updated_at: now,
+      };
+    }
+    await delay(TIMING.matchSaveDelayMs);
+    await route.fulfill({
+      status: response.status(),
+      headers: response.headers(),
+      contentType: "application/json",
+      body: JSON.stringify(json),
     });
   });
 }
@@ -371,70 +539,75 @@ async function recordDemo(page, { fresh }) {
 
   if (fresh) {
     await panel.locator("text=Match jobs with evidence").waitFor({ timeout: 25000 });
-    await pause(page, 1600);
+    await pause(page, TIMING.welcomeHoldMs);
     await panel.getByRole("button", { name: "Set up your profile" }).click();
     await panel.locator("text=Choose your AI provider").waitFor({ timeout: 20000 });
-    await pause(page, 1000);
+    await pause(page, TIMING.aiProviderHoldMs);
   } else {
     await page.locator("iframe#panel").evaluate((el) => {
       el.contentWindow.location.hash = "#/onboarding/ai";
     });
     await panel.locator("text=Choose your AI provider").waitFor({ timeout: 25000 });
-    await pause(page, 1000);
+    await pause(page, TIMING.aiProviderHoldMs);
   }
 
-  // 2 — AI provider (settings pre-seeded to local; highlight LM Studio preset)
+  // 2 — AI provider setup (slow enough to read each choice)
   await panel.locator("text=Local / Self-hosted").click();
-  await pause(page, 600);
+  await pause(page, TIMING.aiSelectHoldMs);
   await panel.getByRole("button", { name: "LM Studio", exact: true }).click();
-  await pause(page, 900);
+  await pause(page, TIMING.aiLmStudioHoldMs);
   await panel.getByRole("button", { name: "Continue" }).click();
   await panel.locator("text=Add your resume").waitFor({ timeout: 20000 });
-  await pause(page, 1000);
+  await pause(page, TIMING.uploadHoldMs);
 
-  // 3 — Paste resume + extract animation
+  // 3 — Paste resume + extract animation (~3s)
   const textarea = panel.locator("textarea").first();
-  await textarea.click();
-  await textarea.fill(DEMO_RESUME_TEXT.slice(0, 180));
-  await pause(page, 500);
   await textarea.fill(DEMO_RESUME_TEXT);
-  await pause(page, 700);
+  await pause(page, 500);
   await panel.getByRole("button", { name: "Extract resume →" }).click();
-  await panel.locator("text=Reading your resume").waitFor({ timeout: 10000 });
-  await pause(page, 3800);
+  await holdLoadingAnimation(panel, "Reading your resume");
 
   // 4 — Review extracted profile
   await panel.locator("text=Review profile").waitFor({ timeout: 20000 });
-  await pause(page, 2200);
+  await pause(page, TIMING.reviewHoldMs);
   await panel.getByRole("button", { name: "Save & continue" }).click();
   await panel.locator("text=Capture a job from your browser").waitFor({ timeout: 25000 });
-  await pause(page, 1500);
+  await pause(page, 800);
 
-  // 5 — Capture tab suction overlay
+  // 5 — Capture overlay (~3s) — job page harvest + panel suction
   await panel.getByRole("button", { name: "Capture tab" }).click();
-  await panel.locator("text=Capturing from tab").waitFor({ timeout: 10000 });
-  await pause(page, 4200);
+  await triggerJobCaptureOverlay(page);
+  await holdLoadingAnimation(panel, "Capturing from tab");
 
   // 6 — Job review after capture
   await panel.locator("text=Senior Backend Engineer").first().waitFor({ timeout: 20000 });
-  await panel.locator("text=FinTech Labs").first().waitFor({ timeout: 10000 });
-  await pause(page, 2400);
+  await pause(page, TIMING.jobReviewHoldMs);
 
-  // 7 — Save job (creates pending match analysis)
+  // 7 — Save & analyze match → completed score + evidence-based reasoning
+  demoCaptureState.lastCreatedJobId = null;
   await panel.getByRole("button", { name: "Save & analyze match" }).click();
-  await panel.locator("text=Deep match analysis").waitFor({ timeout: 25000 }).catch(() => {});
-  await pause(page, 2800);
+  await holdLoadingAnimation(panel, "Deep match analysis", TIMING.matchSaveDelayMs);
+  await waitForDemoMatchMock();
+  await panel.locator("text=Senior Backend Engineer").first().waitFor({ timeout: 25000 });
 
-  // 8 — Back to pipeline
-  await page.locator("iframe#panel").evaluate((el) => {
-    el.contentWindow.location.hash = "#/";
-  });
+  await panel.locator("text=Match analysis").waitFor({ timeout: 10000 }).catch(() => {});
+  await panel.locator("text=Designed REST and GraphQL APIs").waitFor({ timeout: 15000 });
   await panel
-    .locator("text=Opportunities")
-    .or(panel.locator("text=Senior Backend Engineer"))
-    .first()
-    .waitFor({ timeout: 20000 });
-  await pause(page, 1800);
+    .getByText("89", { exact: true })
+    .waitFor({ timeout: 5000 })
+    .catch(() => {});
+  await panel.locator("text=Summary").waitFor({ timeout: 5000 }).catch(() => {});
+  await pause(page, TIMING.matchEvidenceHoldMs);
+
+  await panel.locator("text=Strengths").scrollIntoViewIfNeeded();
+  await pause(page, 600);
+  await panel.locator("text=Designed REST and GraphQL APIs").scrollIntoViewIfNeeded();
+  await pause(page, TIMING.matchResultHoldMs);
+
+  await panel.getByRole("heading", { name: "Gaps" }).scrollIntoViewIfNeeded();
+  await pause(page, 600);
+  await panel.locator("text=AWS experience is listed").scrollIntoViewIfNeeded();
+  await pause(page, TIMING.matchResultHoldMs);
 }
 
 function webmToGif(webmPath, gifPath) {
@@ -445,7 +618,7 @@ function webmToGif(webmPath, gifPath) {
       "-i",
       webmPath,
       "-vf",
-      "fps=8,scale=960:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=96:stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=3",
+      "fps=9,scale=1200:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=96:stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=3",
       "-loop",
       "0",
       gifPath,
@@ -483,6 +656,7 @@ async function main() {
     await recordDemo(page, { fresh });
 
     webmPath = await page.video()?.path();
+    await context.unrouteAll({ behavior: "ignoreErrors" });
     await context.close();
 
     if (!webmPath) {

@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=960, initial-scale=1" />
+    <meta name="viewport" content="width=1200, initial-scale=1" />
     <title>AI Career OS demo</title>
     <style>
       * {
@@ -11,39 +11,282 @@
       html,
       body {
         margin: 0;
-        width: 960px;
-        height: 720px;
+        width: 1200px;
+        height: 780px;
         overflow: hidden;
-        background: #0f172a;
+        background: #e8eaed;
+        font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
       }
-      .shell {
+
+      .browser {
+        width: 1200px;
+        height: 780px;
         display: flex;
-        width: 960px;
-        height: 720px;
+        flex-direction: column;
+        background: #fff;
+        border: 1px solid #c4c7c5;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 18px 48px rgba(15, 23, 42, 0.18);
+      }
+
+      /* Title bar (macOS-style) */
+      .titlebar {
+        height: 38px;
+        background: linear-gradient(180deg, #ececec 0%, #e3e3e3 100%);
+        border-bottom: 1px solid #c8c8c8;
+        display: flex;
+        align-items: center;
+        padding: 0 14px;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+      .traffic {
+        display: flex;
+        gap: 7px;
+      }
+      .traffic span {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        border: 0.5px solid rgba(0, 0, 0, 0.08);
+      }
+      .traffic .close {
+        background: #ff5f57;
+      }
+      .traffic .min {
+        background: #febc2e;
+      }
+      .traffic .max {
+        background: #28c840;
+      }
+      .titlebar-label {
+        flex: 1;
+        text-align: center;
+        font-size: 12px;
+        font-weight: 500;
+        color: #5f6368;
+        margin-right: 52px;
+      }
+
+      /* Tab strip */
+      .tabs {
+        height: 36px;
+        background: #dee1e6;
+        display: flex;
+        align-items: flex-end;
+        padding: 0 10px;
+        gap: 2px;
+        flex-shrink: 0;
+      }
+      .tab {
+        height: 30px;
+        max-width: 260px;
+        padding: 0 12px;
+        background: #c2c5ca;
+        border-radius: 8px 8px 0 0;
+        font-size: 11.5px;
+        color: #3c4043;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .tab.active {
+        background: #fff;
+        color: #202124;
+        font-weight: 500;
+      }
+      .tab-favicon {
+        width: 14px;
+        height: 14px;
+        border-radius: 3px;
+        background: linear-gradient(135deg, #008561, #0f766e);
+        flex-shrink: 0;
+      }
+      .tab-new {
+        width: 28px;
+        height: 28px;
+        margin-left: 4px;
+        margin-bottom: 2px;
+        border-radius: 50%;
+        color: #5f6368;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        line-height: 1;
+      }
+
+      /* Toolbar + URL bar */
+      .toolbar {
+        height: 44px;
+        background: #fff;
+        border-bottom: 1px solid #e0e0e0;
+        display: flex;
+        align-items: center;
+        padding: 0 10px;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+      .nav-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        color: #5f6368;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+      }
+      .omnibox {
+        flex: 1;
+        height: 30px;
+        background: #f1f3f4;
+        border-radius: 999px;
+        display: flex;
+        align-items: center;
+        padding: 0 12px;
+        gap: 8px;
+        font-size: 12px;
+        color: #3c4043;
+        min-width: 0;
+      }
+      .omnibox svg {
+        flex-shrink: 0;
+        color: #5f6368;
+      }
+      .omnibox span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .ext-badge {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: #e6f4ef;
+        border: 1px solid #b7e0d0;
+        font-size: 11px;
+        font-weight: 600;
+        color: #0f766e;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+      .ext-badge-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #0f766e;
+      }
+
+      /* Main content: job tab + side panel */
+      .content {
+        flex: 1;
+        display: flex;
+        min-height: 0;
+        background: #fff;
       }
       .job-pane {
-        width: 560px;
-        height: 720px;
+        flex: 1;
+        min-width: 0;
+        height: 100%;
         border: 0;
         background: #fff;
       }
-      .panel-pane {
+      .panel-shell {
         width: 400px;
-        height: 720px;
+        flex-shrink: 0;
+        height: 100%;
+        border-left: 1px solid #dadce0;
+        background: #f8fafc;
+        display: flex;
+        flex-direction: column;
+      }
+      .panel-header {
+        height: 32px;
+        background: #f1f3f4;
+        border-bottom: 1px solid #dadce0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 10px;
+        font-size: 11px;
+        font-weight: 600;
+        color: #5f6368;
+        flex-shrink: 0;
+      }
+      .panel-header-brand {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: #0f766e;
+      }
+      .panel-header-brand span {
+        width: 14px;
+        height: 14px;
+        border-radius: 4px;
+        background: linear-gradient(135deg, #14b8a6, #0f766e);
+      }
+      .panel-pane {
+        flex: 1;
+        width: 100%;
         border: 0;
-        border-left: 1px solid rgba(148, 163, 184, 0.35);
         background: #fff;
       }
     </style>
   </head>
   <body>
-    <div class="shell">
-      <iframe
-        class="job-pane"
-        title="Job posting"
-        src="/demo/job-posting.html"
-      ></iframe>
-      <iframe class="panel-pane" id="panel" title="AI Career OS side panel" src="/#/welcome"></iframe>
+    <div class="browser">
+      <div class="titlebar">
+        <div class="traffic" aria-hidden="true">
+          <span class="close"></span>
+          <span class="min"></span>
+          <span class="max"></span>
+        </div>
+        <div class="titlebar-label">Google Chrome</div>
+      </div>
+
+      <div class="tabs">
+        <div class="tab active">
+          <span class="tab-favicon"></span>
+          Senior Backend Engineer — RandomishLabs
+        </div>
+        <div class="tab-new" aria-hidden="true">+</div>
+      </div>
+
+      <div class="toolbar">
+        <div class="nav-btn" aria-hidden="true">←</div>
+        <div class="nav-btn" aria-hidden="true">→</div>
+        <div class="nav-btn" aria-hidden="true">↻</div>
+        <div class="omnibox">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path
+              d="M12 1a5 5 0 00-5 5v2H6a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V10a2 2 0 00-2-2h-1V6a5 5 0 00-5-5zm-3 5V6a3 3 0 016 0v2H9z"
+            />
+          </svg>
+          <span>careers.randomishlabs.com/jobs/senior-backend-engineer</span>
+        </div>
+        <div class="ext-badge">
+          <span class="ext-badge-dot"></span>
+          AI Career OS
+        </div>
+      </div>
+
+      <div class="content">
+        <iframe class="job-pane" title="Job posting" src="/demo/job-posting.html"></iframe>
+        <div class="panel-shell">
+          <div class="panel-header">
+            <div class="panel-header-brand"><span></span> AI Career OS</div>
+            <span>Side panel</span>
+          </div>
+          <iframe class="panel-pane" id="panel" title="AI Career OS side panel" src="/#/welcome"></iframe>
+        </div>
+      </div>
     </div>
   </body>
 </html>

@@ -8,10 +8,10 @@
 Capture jobs from your browser with the **Chrome extension** (source-agnostic DOM read — no per-site integrations; LLM classifies and extracts on our backend), or paste descriptions in the web app. Upload or paste your resume, extract structured profile data with an LLM you control, review everything, and get **automatic explainable match analysis** — then research the company, tune your resume, and draft a cover letter.
 
 <p align="center">
-  <img src="docs/assets/demo/demo.gif" alt="AI Career OS demo — job posting capture, profile setup with AI extract, and explainable match pipeline" width="640" />
+  <img src="docs/assets/demo/demo.gif" alt="AI Career OS demo — Chrome browser with job posting, side panel, resume extract, and capture animations" width="720" />
 </p>
 
-<p align="center"><em>Job page + side panel: profile setup → resume extract → capture tab → match pipeline</em></p>
+<p align="center"><em>Chrome window: profile setup → capture → explainable match score with evidence-backed strengths & gaps</em></p>
 
 ---
 
