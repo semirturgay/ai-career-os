@@ -2,44 +2,23 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import type { Job } from "../types";
-import { latestAnalysisForJob } from "../lib/matches";
 
-interface UseJobDetailOptions {
-  initialAnalysisId?: string;
-}
-
-export function useJobDetail(
-  jobId: string | undefined,
-  profileId: string | undefined,
-  options: UseJobDetailOptions = {},
-) {
+export function useJobDetail(jobId: string | undefined) {
   const navigate = useNavigate();
   const [job, setJob] = useState<Job | null>(null);
-  const [matchAnalysisId, setMatchAnalysisId] = useState<string | undefined>(
-    options.initialAnalysisId,
-  );
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    if (!jobId || !profileId) return;
-
+    if (!jobId) return;
     const jobData = await api.jobs.get(jobId);
     setJob(jobData);
-
-    if (options.initialAnalysisId) {
-      setMatchAnalysisId(options.initialAnalysisId);
-      return;
-    }
-
-    const analyses = await api.matchAnalyses.list();
-    const latest = latestAnalysisForJob(analyses, profileId, jobData.id);
-    setMatchAnalysisId(latest?.id);
-  }, [jobId, profileId, options.initialAnalysisId]);
+  }, [jobId]);
 
   useEffect(() => {
-    if (!jobId || !profileId) return;
+    if (!jobId) return;
 
     let cancelled = false;
+    setLoading(true);
     load()
       .catch((err) => {
         if (!cancelled) {
@@ -54,7 +33,7 @@ export function useJobDetail(
     return () => {
       cancelled = true;
     };
-  }, [jobId, profileId, load, navigate]);
+  }, [jobId, load, navigate]);
 
-  return { job, setJob, matchAnalysisId, setMatchAnalysisId, loading };
+  return { job, setJob, loading, refreshJob: load };
 }

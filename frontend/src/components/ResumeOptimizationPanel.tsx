@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { MatchAnalysis, ResumeOptimizationResult, ResumeSuggestion, Job } from "../types";
+import { taskKey, trackAsyncTask, useAsyncTask } from "../lib/asyncTasks";
+import { readResumeArtifact } from "../lib/jobArtifacts";
 import { isFullMatch } from "../lib/matches";
 import { readResumeProgress } from "../lib/matchImprovement";
 import { AiLoadingState } from "./AiLoadingState";
@@ -30,30 +32,47 @@ export function ResumeOptimizationPanel({
   flat = false,
   onGenerated,
 }: ResumeOptimizationPanelProps) {
-  const [loading, setLoading] = useState(false);
+  const generateTaskKey = taskKey("resume", job.id, analysis.id);
+  const generateTask = useAsyncTask(generateTaskKey);
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<ResumeOptimizationResult | null>(null);
+  const [result, setResult] = useState<ResumeOptimizationResult | null>(() =>
+    readResumeArtifact(job, analysis.id),
+  );
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [applied, setApplied] = useState(false);
 
   const gaps = analysis.result?.gaps ?? [];
   const canOptimize = isFullMatch(analysis) && gaps.length > 0;
   const resumeProgress = readResumeProgress(job);
+  const loading = generateTask?.status === "running";
+
+  useEffect(() => {
+    const saved = readResumeArtifact(job, analysis.id);
+    if (!saved) return;
+    setResult(saved);
+    setSelected(new Set(saved.suggestions.map((_, index) => index)));
+  }, [job.id, job.updated_at, analysis.id]);
 
   async function handleGenerate() {
-    setLoading(true);
     setError(null);
     try {
-      const optimization = await api.matchAnalyses.optimizeResume(analysis.id);
+      const optimization = await trackAsyncTask(
+        {
+          key: generateTaskKey,
+          kind: "resume",
+          jobId: job.id,
+          label: "Generating resume suggestions",
+        },
+        () => api.matchAnalyses.optimizeResume(analysis.id),
+      );
       setResult(optimization);
       setSelected(new Set(optimization.suggestions.map((_, index) => index)));
       setApplied(false);
       onGenerated?.();
+      await onApplied();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate suggestions");
-    } finally {
-      setLoading(false);
     }
   }
 

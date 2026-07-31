@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { CompanyBrief, Job } from "../types";
+import { taskKey, trackAsyncTask, useAsyncTask } from "../lib/asyncTasks";
 import { AiLoadingState } from "./AiLoadingState";
 import { Button, Card, ErrorBanner } from "./ui";
 
@@ -30,22 +31,35 @@ export function CompanyResearchPanel({
   flat = false,
   onComplete,
 }: CompanyResearchPanelProps) {
-  const [loading, setLoading] = useState(false);
+  const researchTaskKey = taskKey("research", job.id);
+  const researchTask = useAsyncTask(researchTaskKey);
   const [error, setError] = useState<string | null>(null);
   const [brief, setBrief] = useState<CompanyBrief | null>(job.company_brief ?? null);
+  const loading = researchTask?.status === "running";
+
+  useEffect(() => {
+    if (job.company_brief) {
+      setBrief(job.company_brief);
+    }
+  }, [job.id, job.updated_at]);
 
   async function handleResearch() {
-    setLoading(true);
     setError(null);
     try {
-      const result = await api.jobs.researchCompany(job.id);
+      const result = await trackAsyncTask(
+        {
+          key: researchTaskKey,
+          kind: "research",
+          jobId: job.id,
+          label: `Researching ${job.company}`,
+        },
+        () => api.jobs.researchCompany(job.id),
+      );
       setBrief(result);
       onUpdated(result);
       onComplete?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to research company");
-    } finally {
-      setLoading(false);
     }
   }
 

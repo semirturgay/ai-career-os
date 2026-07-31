@@ -1,17 +1,6 @@
-/* Shared with the bundled React app — warm paper & teal accent */
+@import "../../design/theme-tokens.css";
+
 :root {
-  color-scheme: light;
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --color-surface: #f7f6f3;
-  --color-surface-raised: #ffffff;
-  --color-surface-overlay: #efeeea;
-  --color-border: #dfddd6;
-  --color-text: #1c1917;
-  --color-text-muted: #6b6560;
-  --color-accent: #0f766e;
-  --color-accent-hover: #0d9488;
-  --color-success: #15803d;
-  --color-danger: #b91c1c;
   font-family: var(--font-sans);
   font-size: 14px;
   line-height: 1.45;
@@ -96,8 +85,8 @@ body {
 }
 
 .card.error {
-  border-color: #fecaca;
-  background: #fef2f2;
+  border-color: var(--color-danger-border);
+  background: var(--color-danger-surface);
   color: var(--color-danger);
 }
 
@@ -122,7 +111,7 @@ body {
 
 .btn-primary {
   background: var(--color-accent);
-  color: #fff;
+  color: light-dark(#fff, #042f2e);
 }
 
 .btn-primary:hover:not(:disabled) {

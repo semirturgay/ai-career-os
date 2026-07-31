@@ -157,9 +157,9 @@
         max-width: min(240px, 42vw);
         padding: 6px 10px;
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.92);
+        background: light-dark(rgba(255, 255, 255, 0.92), rgba(28, 25, 23, 0.92));
         border: 1px solid rgba(20, 184, 166, 0.45);
-        color: #134e4a;
+        color: light-dark(#134e4a, #99f6e4);
         font-size: 11px;
         font-weight: 600;
         letter-spacing: -0.01em;
@@ -180,10 +180,10 @@
         gap: 10px;
         padding: 10px 16px;
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.94);
+        background: light-dark(rgba(255, 255, 255, 0.94), rgba(28, 25, 23, 0.94));
         border: 1px solid rgba(20, 184, 166, 0.35);
         box-shadow: 0 12px 40px rgba(15, 118, 110, 0.2);
-        color: #134e4a;
+        color: light-dark(#134e4a, #99f6e4);
         font-size: 13px;
         font-weight: 600;
         animation: ac-status-in 0.4s ease-out both;
@@ -211,8 +211,8 @@
       }
 
       #${OVERLAY_ID}.ac-error .ac-status {
-        border-color: rgba(185, 28, 28, 0.45);
-        color: #991b1b;
+        border-color: light-dark(rgba(185, 28, 28, 0.45), rgba(248, 113, 113, 0.45));
+        color: light-dark(#991b1b, #fecaca);
       }
 
       #${OVERLAY_ID}.ac-error .ac-status-dot {

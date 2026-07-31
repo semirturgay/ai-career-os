@@ -1,6 +1,7 @@
 import { Sidebar } from "./Sidebar";
 import { EmbeddedNav } from "./EmbeddedNav";
 import { CaptureFromTabBar } from "./CaptureFromTabBar";
+import { GlobalTaskIndicator } from "./GlobalTaskIndicator";
 import { useEmbeddedMode } from "../hooks/useEmbeddedMode";
 
 interface LayoutProps {
@@ -26,6 +27,7 @@ export function Layout({
     return (
       <div className="flex min-h-screen flex-col bg-surface pb-14">
         {captureBar && <CaptureFromTabBar />}
+        <GlobalTaskIndicator />
         {(title || subtitle) && (
           <header className="border-b border-border bg-surface/80 px-4 py-3 backdrop-blur-sm">
             {title && <h1 className="text-base font-semibold tracking-tight text-text">{title}</h1>}
@@ -50,6 +52,7 @@ export function Layout({
     <div className="flex min-h-screen flex-col bg-surface lg:flex-row">
       <Sidebar />
       <div className="flex min-h-screen min-w-0 flex-1 flex-col">
+        <GlobalTaskIndicator />
         {(title || subtitle) && (
           <header className="hidden border-b border-border bg-surface/80 px-8 py-5 backdrop-blur-sm lg:block">
             {title && <h1 className="text-xl font-semibold tracking-tight text-text">{title}</h1>}

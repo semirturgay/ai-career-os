@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
-import type { JobExtraction, MatchAnalysis } from "../types";
+import type { JobExtraction } from "../types";
 import { AiLoadingState, PageLoader } from "../components/AiLoadingState";
 import { Layout } from "../components/Layout";
 import { JobDetailTabs, type JobDetailTab } from "../components/JobDetailTabs";
 import { useProfileRoute } from "../components/RequireProfileLayout";
 import { useJobDetail } from "../hooks/useJobDetail";
 import { useMatchAnalysis } from "../hooks/useMatchAnalysis";
+import { usePipelineSync } from "../hooks/PipelineSyncContext";
 import {
   buildJobExtractSource,
   canExtractFromText,
@@ -43,12 +44,16 @@ export function JobDetailPage() {
   });
   const matchSectionRef = useRef<HTMLElement>(null);
   const { profile } = useProfileRoute();
-  const { job, setJob, matchAnalysisId, setMatchAnalysisId, loading } = useJobDetail(
-    id,
-    profile.id,
-    { initialAnalysisId: intakeRef.current.matchAnalysisId },
-  );
-  const { analysis, setAnalysis } = useMatchAnalysis(matchAnalysisId);
+  const { job, setJob, loading } = useJobDetail(id);
+  const {
+    getAnalysesForJob,
+    getLatestAnalysisForJob,
+    refreshPipeline,
+    refreshJob: syncJobInPipeline,
+  } = usePipelineSync();
+  const pipelineAnalysis = job ? getLatestAnalysisForJob(job.id) : undefined;
+  const { analysis, setAnalysis } = useMatchAnalysis(pipelineAnalysis?.id);
+  const jobAnalyses = job ? getAnalysesForJob(job.id) : [];
   const [analyzing, setAnalyzing] = useState(false);
   const [reExtracting, setReExtracting] = useState(false);
   const [applyingExtraction, setApplyingExtraction] = useState(false);
@@ -57,19 +62,13 @@ export function JobDetailPage() {
     jobText: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [jobAnalyses, setJobAnalyses] = useState<MatchAnalysis[]>([]);
+  const refreshedAnalysisRef = useRef<string | null>(null);
 
-  const refreshJob = useCallback(async () => {
+  const handleRefreshJob = useCallback(async () => {
     if (!id) return;
-    const updated = await api.jobs.get(id);
+    const updated = await syncJobInPipeline(id);
     setJob(updated);
-  }, [id, setJob]);
-
-  const refreshJobAnalyses = useCallback(async () => {
-    if (!id) return;
-    const all = await api.matchAnalyses.list();
-    setJobAnalyses(all.filter((entry) => entry.profile_id === profile.id && entry.job_id === id));
-  }, [id, profile.id]);
+  }, [id, setJob, syncJobInPipeline]);
 
   useEffect(() => {
     if (!intakeRef.current.focusMatch || loading) return;
@@ -79,15 +78,11 @@ export function JobDetailPage() {
   }, [loading, location.pathname, navigate]);
 
   useEffect(() => {
-    if (loading || !job) return;
-    void refreshJobAnalyses();
-  }, [loading, job, refreshJobAnalyses]);
-
-  useEffect(() => {
-    if (analysis?.status !== "completed") return;
-    void refreshJob();
-    void refreshJobAnalyses();
-  }, [analysis?.status, analysis?.id, refreshJob, refreshJobAnalyses]);
+    if (analysis?.status !== "completed" || !id || !analysis.id) return;
+    if (refreshedAnalysisRef.current === analysis.id) return;
+    refreshedAnalysisRef.current = analysis.id;
+    void handleRefreshJob();
+  }, [analysis?.status, analysis?.id, id, handleRefreshJob]);
 
   async function handleAnalyze() {
     if (!job) return;
@@ -95,8 +90,8 @@ export function JobDetailPage() {
     setError(null);
     try {
       const created = await api.matchAnalyses.create(profile.id, job.id);
-      setMatchAnalysisId(created.id);
       setAnalysis(created);
+      await refreshPipeline();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start analysis");
     } finally {
@@ -351,7 +346,7 @@ export function JobDetailPage() {
                 initialTab={focusTab}
                 focusNextStep={focusNextStep}
                 onJobUpdated={setJob}
-                onRefreshJob={refreshJob}
+                onRefreshJob={handleRefreshJob}
                 onReAnalyze={handleAnalyze}
                 analyzing={analyzing}
                 jobAnalyses={jobAnalyses}
@@ -372,7 +367,7 @@ export function JobDetailPage() {
                 initialTab={focusTab}
                 focusNextStep={focusNextStep}
                 onJobUpdated={setJob}
-                onRefreshJob={refreshJob}
+                onRefreshJob={handleRefreshJob}
                 onReAnalyze={handleAnalyze}
                 analyzing={analyzing}
                 jobAnalyses={jobAnalyses}

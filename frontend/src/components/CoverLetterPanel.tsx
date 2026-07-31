@@ -1,34 +1,56 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api/client";
-import type { CoverLetterResult, MatchAnalysis } from "../types";
+import type { CoverLetterResult, Job, MatchAnalysis } from "../types";
+import { taskKey, trackAsyncTask, useAsyncTask } from "../lib/asyncTasks";
+import { readCoverLetterArtifact } from "../lib/jobArtifacts";
 import { isFullMatch } from "../lib/matches";
 import { AiLoadingState } from "./AiLoadingState";
 import { Button, Card, ErrorBanner } from "./ui";
 
 interface CoverLetterPanelProps {
+  job: Job;
   analysis: MatchAnalysis;
   flat?: boolean;
-  onGenerated?: () => void;
+  onGenerated?: () => void | Promise<void>;
 }
 
-export function CoverLetterPanel({ analysis, flat = false, onGenerated }: CoverLetterPanelProps) {
-  const [loading, setLoading] = useState(false);
+export function CoverLetterPanel({
+  job,
+  analysis,
+  flat = false,
+  onGenerated,
+}: CoverLetterPanelProps) {
+  const generateTaskKey = taskKey("cover", job.id, analysis.id);
+  const generateTask = useAsyncTask(generateTaskKey);
   const [error, setError] = useState<string | null>(null);
-  const [letter, setLetter] = useState<CoverLetterResult | null>(null);
+  const [letter, setLetter] = useState<CoverLetterResult | null>(() =>
+    readCoverLetterArtifact(job, analysis.id),
+  );
+  const loading = generateTask?.status === "running";
+
+  useEffect(() => {
+    const saved = readCoverLetterArtifact(job, analysis.id);
+    if (saved) setLetter(saved);
+  }, [job.id, job.updated_at, analysis.id]);
 
   if (!isFullMatch(analysis)) return null;
 
   async function handleGenerate() {
-    setLoading(true);
     setError(null);
     try {
-      const result = await api.matchAnalyses.generateCoverLetter(analysis.id);
+      const result = await trackAsyncTask(
+        {
+          key: generateTaskKey,
+          kind: "cover",
+          jobId: job.id,
+          label: "Generating cover letter",
+        },
+        () => api.matchAnalyses.generateCoverLetter(analysis.id),
+      );
       setLetter(result);
-      onGenerated?.();
+      await onGenerated?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate cover letter");
-    } finally {
-      setLoading(false);
     }
   }
 

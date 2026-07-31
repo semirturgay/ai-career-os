@@ -1,50 +1,19 @@
-import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api } from "../api/client";
-import type { Job } from "../types";
 import { JobBoard } from "../components/JobBoard";
 import { Layout } from "../components/Layout";
 import { PageLoader } from "../components/AiLoadingState";
 import { useProfileRoute } from "../components/RequireProfileLayout";
 import { useEmbeddedMode } from "../hooks/useEmbeddedMode";
-import { usePolling } from "../hooks/usePolling";
-import { pendingAnalysesCount, scoreFromResult, latestAnalysisForJob } from "../lib/matches";
-import type { MatchAnalysis } from "../types";
+import { usePipelineSync } from "../hooks/PipelineSyncContext";
+import { scoreFromResult, latestAnalysisForJob } from "../lib/matches";
 
 export function HomePage() {
   const { profile } = useProfileRoute();
   const embedded = useEmbeddedMode();
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [analyses, setAnalyses] = useState<MatchAnalysis[]>([]);
-  const [dataLoading, setDataLoading] = useState(true);
-
-  const refreshPipeline = useCallback(async () => {
-    const [jobList, analysisList] = await Promise.all([
-      api.jobs.list(),
-      api.matchAnalyses.list(),
-    ]);
-    setJobs(jobList);
-    setAnalyses(analysisList.filter((a) => a.profile_id === profile.id));
-  }, [profile.id]);
-
-  useEffect(() => {
-    async function load() {
-      try {
-        await refreshPipeline();
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setDataLoading(false);
-      }
-    }
-    load();
-  }, [refreshPipeline]);
-
-  const pendingCount = pendingAnalysesCount(analyses, profile.id);
-  usePolling(refreshPipeline, pendingCount > 0);
+  const { jobs, analyses, pendingMatchCount, loading } = usePipelineSync();
   const isEmptyPipeline = jobs.length === 0;
 
-  if (dataLoading) {
+  if (loading) {
     return (
       <Layout title="Pipeline" subtitle="Your opportunities">
         <PageLoader variant="page" />
@@ -153,8 +122,8 @@ export function HomePage() {
             <div>
               <h3 className={`font-semibold ${embedded ? "text-base" : "text-lg"}`}>Opportunities</h3>
               <p className="text-xs text-text-muted sm:text-sm">
-                {pendingCount > 0
-                  ? `Analyzing ${pendingCount} job${pendingCount === 1 ? "" : "s"}…`
+                {pendingMatchCount > 0
+                  ? `Analyzing ${pendingMatchCount} job${pendingMatchCount === 1 ? "" : "s"}…`
                   : "Ranked by match score"}
               </p>
             </div>

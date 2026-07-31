@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect } from "react";
+import { createContext, useContext, useEffect, useMemo } from "react";
 import { Outlet } from "react-router-dom";
 import { PageLoader } from "./AiLoadingState";
+import { PipelineSyncProvider } from "../hooks/PipelineSyncContext";
 import { useActiveProfile } from "../hooks/useActiveProfile";
 import type { Profile } from "../types";
 
@@ -10,6 +11,21 @@ interface ProfileRouteContextValue {
 }
 
 const ProfileRouteContext = createContext<ProfileRouteContextValue | null>(null);
+
+function ProfileRouteShell({
+  profile,
+  setProfile,
+}: ProfileRouteContextValue) {
+  const value = useMemo(() => ({ profile, setProfile }), [profile, setProfile]);
+
+  return (
+    <ProfileRouteContext.Provider value={value}>
+      <PipelineSyncProvider profileId={profile.id}>
+        <Outlet />
+      </PipelineSyncProvider>
+    </ProfileRouteContext.Provider>
+  );
+}
 
 /** Redirects to welcome when no profile; provides profile to nested routes. */
 export function RequireProfileLayout() {
@@ -25,11 +41,7 @@ export function RequireProfileLayout() {
     return <PageLoader variant="page" />;
   }
 
-  return (
-    <ProfileRouteContext.Provider value={{ profile, setProfile }}>
-      <Outlet />
-    </ProfileRouteContext.Provider>
-  );
+  return <ProfileRouteShell profile={profile} setProfile={setProfile} />;
 }
 
 export function useProfileRoute(): ProfileRouteContextValue {

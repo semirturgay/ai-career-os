@@ -16,6 +16,11 @@ from app.schemas import (
 from app.schemas.enums import MatchDepth
 from app.services.application_progress import STEP_COVER_LETTER, STEP_RESUME, mark_application_step
 from app.services.cover_letter_generator import generate_cover_letter
+from app.services.job_artifacts import (
+    ARTIFACT_COVER_LETTER,
+    ARTIFACT_RESUME_OPTIMIZATION,
+    save_job_artifact,
+)
 from app.services.match import (
     match_result_for_cover_letter,
     match_result_from_analysis_payload,
@@ -105,6 +110,12 @@ async def create_resume_optimization(
 
     result = await optimize_resume_for_match(db, profile, job, match_result)
     job.raw_metadata = mark_application_step(job.raw_metadata, STEP_RESUME)
+    job.raw_metadata = save_job_artifact(
+        job.raw_metadata,
+        ARTIFACT_RESUME_OPTIMIZATION,
+        analysis_id=str(analysis.id),
+        result=result.model_dump(),
+    )
     await db.commit()
     return result
 
@@ -135,5 +146,11 @@ async def create_cover_letter(
 
     result = await generate_cover_letter(db, profile, job, match_result)
     job.raw_metadata = mark_application_step(job.raw_metadata, STEP_COVER_LETTER)
+    job.raw_metadata = save_job_artifact(
+        job.raw_metadata,
+        ARTIFACT_COVER_LETTER,
+        analysis_id=str(analysis.id),
+        result=result.model_dump(),
+    )
     await db.commit()
     return result

@@ -1,0 +1,22 @@
+/* Shared light/dark tokens — follows system via color-scheme + light-dark() */
+:root {
+  color-scheme: light dark;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* Warm paper (light) / warm ink (dark) */
+  --color-surface: light-dark(#f7f6f3, #141210);
+  --color-surface-raised: light-dark(#ffffff, #1c1917);
+  --color-surface-overlay: light-dark(#efeeea, #292524);
+  --color-surface-elevated: light-dark(#ffffff, #292524);
+  --color-border: light-dark(#dfddd6, #44403c);
+  --color-text: light-dark(#1c1917, #fafaf9);
+  --color-text-muted: light-dark(#6b6560, #a8a29e);
+  --color-accent: light-dark(#0f766e, #2dd4bf);
+  --color-accent-hover: light-dark(#0d9488, #5eead4);
+  --color-success: light-dark(#15803d, #4ade80);
+  --color-warning: light-dark(#b45309, #fbbf24);
+  --color-danger: light-dark(#b91c1c, #f87171);
+  --color-danger-surface: light-dark(#fef2f2, #450a0a);
+  --color-danger-border: light-dark(#fecaca, #7f1d1d);
+}

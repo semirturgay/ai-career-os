@@ -82,41 +82,42 @@ export function JobDetailTabs({
   const tabCopy = TAB_COPY[activeTab];
 
   useEffect(() => {
-    if (!analysisComplete && activeTab !== "match") {
-      setActiveTab("match");
+    if (!analysisComplete) {
+      setActiveTab((current) => (current === "match" ? current : "match"));
+      return;
     }
-  }, [analysisComplete, activeTab]);
 
-  useEffect(() => {
     if (initialTab !== "match" && tabUnlocked(initialTab, analysis)) {
       setActiveTab(initialTab);
       tailoredRef.current = true;
+      return;
     }
-  }, [initialTab, analysis]);
 
-  useEffect(() => {
-    if (tailoredRef.current || !focusNextStep || !analysisComplete) return;
-    const nextTab = nextApplicationTab(job, analysis);
-    if (nextTab !== "match") {
-      setActiveTab(nextTab);
-      tailoredRef.current = true;
-    }
-  }, [focusNextStep, analysisComplete, job, analysis]);
-
-  useEffect(() => {
     const wasPending = prevStatusRef.current === "pending";
     const nowComplete = analysis?.status === "completed";
-    if (wasPending && nowComplete && isFullMatch(analysis)) {
-      if (focusNextStep && !tailoredRef.current) {
-        const nextTab = nextApplicationTab(job, analysis);
-        if (nextTab !== "match") {
-          setActiveTab(nextTab);
-          tailoredRef.current = true;
-        }
+    const shouldFocusNext =
+      focusNextStep &&
+      !tailoredRef.current &&
+      (wasPending && nowComplete ? isFullMatch(analysis) : true);
+
+    if (shouldFocusNext) {
+      const nextTab = nextApplicationTab(job, analysis);
+      if (nextTab !== "match") {
+        setActiveTab(nextTab);
+        tailoredRef.current = true;
       }
     }
+
     prevStatusRef.current = analysis?.status;
-  }, [analysis, focusNextStep, job]);
+  }, [
+    analysisComplete,
+    initialTab,
+    focusNextStep,
+    job.id,
+    job.updated_at,
+    analysis?.id,
+    analysis?.status,
+  ]);
 
   function handleStepSelect(tab: JobDetailTab) {
     if (!tabUnlocked(tab, analysis)) return;
@@ -170,6 +171,7 @@ export function JobDetailTabs({
           <CompanyResearchPanel
             job={job}
             onUpdated={(brief: CompanyBrief) => onJobUpdated({ ...job, company_brief: brief })}
+            onComplete={() => void onRefreshJob?.()}
           />
         )}
 
@@ -187,7 +189,11 @@ export function JobDetailTabs({
         )}
 
         {activeTab === "cover" && analysis && (
-          <CoverLetterPanel analysis={analysis} onGenerated={() => void onRefreshJob?.()} />
+          <CoverLetterPanel
+            job={job}
+            analysis={analysis}
+            onGenerated={() => onRefreshJob?.()}
+          />
         )}
       </div>
     </div>
