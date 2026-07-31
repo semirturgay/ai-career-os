@@ -19,3 +19,15 @@ def test_extractors_script_is_provider_agnostic():
     assert "function extractGreenhouse" not in script
     assert "function detectJobSource" not in script
     assert "linkedin.com" not in script.lower()
+
+
+def test_extractors_prefers_richest_content_root():
+    script = (REPO_ROOT / "extension/content/extractors.js").read_text(encoding="utf-8")
+    assert "function findContentRoot" in script
+    assert "visibleTextLength" in script
+
+
+def test_extractors_prepends_page_title():
+    script = (REPO_ROOT / "extension/content/extractors.js").read_text(encoding="utf-8")
+    assert "function prependPageTitle" in script
+    assert "Page title:" in script

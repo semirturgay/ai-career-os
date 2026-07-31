@@ -4,6 +4,20 @@ import httpx
 import pytest
 
 from app.schemas.job_capture import JobCaptureClassification
+from app.services.job_capture_classifier import build_capture_classification_message
+
+
+def test_build_capture_classification_message_puts_metadata_first():
+    message = build_capture_classification_message(
+        "Senior Backend Engineer\n\nRequirements\n- Python",
+        page_title="Senior Backend Engineer — FinTech Labs",
+        page_url="https://boards.greenhouse.io/acme/jobs/123",
+    )
+    title_index = message.index("Browser tab title:")
+    url_index = message.index("Page URL")
+    text_index = message.index("Captured visible page text:")
+    assert title_index < url_index < text_index
+    assert "FinTech Labs" in message
 
 
 @pytest.mark.asyncio

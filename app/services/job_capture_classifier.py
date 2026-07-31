@@ -11,12 +11,16 @@ def build_capture_classification_message(
     page_title: str | None = None,
     page_url: str | None = None,
 ) -> str:
-    parts = ["Captured visible page text:\n", text.strip()]
+    parts: list[str] = []
     if page_title:
-        parts.append(f"\n\nBrowser tab title: {page_title.strip()}")
+        parts.append(f"Browser tab title: {page_title.strip()}")
     if page_url:
-        parts.append(f"\nPage URL (metadata only, not fetched): {page_url.strip()}")
-    return "".join(parts)
+        parts.append(f"Page URL (metadata only, not fetched): {page_url.strip()}")
+    if parts:
+        parts.append("")
+    parts.append("Captured visible page text:")
+    parts.append(text.strip())
+    return "\n".join(parts)
 
 
 async def classify_job_capture(

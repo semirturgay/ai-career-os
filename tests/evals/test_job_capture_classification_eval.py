@@ -55,12 +55,22 @@ async def test_classify_job_capture_pipeline(case_name: str, case_dir: Path):
         result = await classify_job_capture(
             None,
             captured_text,
-            page_title="Example tab title",
+            page_title=(
+                "Senior Backend Engineer — FinTech Labs"
+                if case_name == "job_detail_tab_title_company"
+                else "Example tab title"
+            ),
             page_url="https://example.com/jobs/123",
         )
 
     assert (
         captured_text in mock_client.generate_structured.await_args.kwargs["messages"][-1].content
     )
+    if case_name == "job_detail_tab_title_company":
+        user_content = mock_client.generate_structured.await_args.kwargs["messages"][-1].content
+        assert "Browser tab title:" in user_content
+        assert user_content.index("Browser tab title:") < user_content.index(
+            "Captured visible page text:"
+        )
     failures = evaluate_capture_classification(result, expected, case_name=case_name)
     assert not failures, "\n".join(failures)
