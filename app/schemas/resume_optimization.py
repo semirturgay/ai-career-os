@@ -20,3 +20,5 @@ class ResumeOptimizationResult(BaseModel):
 
 class ApplyResumeSuggestionsRequest(BaseModel):
     suggestions: list[ResumeSuggestion] = Field(min_length=1)
+    job_id: str | None = None
+    match_analysis_id: str | None = None

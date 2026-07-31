@@ -1,12 +1,24 @@
-import type { MatchAnalysis, MatchResult } from "../types";
+import type { MatchAnalysis, MatchResult, Job } from "../types";
 import { AiLoadingState } from "./AiLoadingState";
+import { MatchImprovementBanner } from "./MatchImprovementBanner";
 import { ScoreRing } from "./ScoreRing";
-import { Badge, Card } from "./ui";
+import { Badge, Button, Card } from "./ui";
 
 interface MatchResultPanelProps {
   analysis: MatchAnalysis | null;
+  job?: Job;
+  profileId?: string;
+  jobAnalyses?: MatchAnalysis[];
   profileName?: string;
   jobTitle?: string;
+  onAnalyze?: () => void;
+  analyzing?: boolean;
+}
+
+function analyzeLabel(analysis: MatchAnalysis | null): string {
+  if (analysis?.status === "failed") return "Retry analysis";
+  if (analysis?.status === "completed") return "Re-analyze match";
+  return "Analyze match";
 }
 
 const recommendationLabels: Record<
@@ -113,13 +125,31 @@ function severityVariant(severity: MatchResult["gaps"][number]["severity"]) {
   return "info";
 }
 
-export function MatchResultPanel({ analysis, profileName, jobTitle }: MatchResultPanelProps) {
+export function MatchResultPanel({
+  analysis,
+  job,
+  profileId,
+  jobAnalyses = [],
+  profileName,
+  jobTitle,
+  onAnalyze,
+  analyzing = false,
+}: MatchResultPanelProps) {
+  const showAnalyzeButton = onAnalyze && analysis?.status !== "pending";
+
   if (!analysis) {
     return (
       <Card title="Match result" description="Run an analysis to see explainable output here">
-        <p className="py-8 text-center text-sm text-text-muted">
-          Save a profile and job, then click &ldquo;Analyze match&rdquo;.
-        </p>
+        <div className="flex flex-col items-center gap-4 py-6">
+          <p className="text-center text-sm text-text-muted">
+            Compare this job against your profile for an explainable fit score.
+          </p>
+          {onAnalyze && (
+            <Button onClick={onAnalyze} loading={analyzing}>
+              Analyze match
+            </Button>
+          )}
+        </div>
       </Card>
     );
   }
@@ -139,8 +169,30 @@ export function MatchResultPanel({ analysis, profileName, jobTitle }: MatchResul
           ? `${profileName} → ${jobTitle}`
           : "Explainable match analysis"
       }
-      action={<Badge variant={statusVariant}>{analysis.status}</Badge>}
+      action={
+        <div className="flex shrink-0 items-center gap-2">
+          <Badge variant={statusVariant}>{analysis.status}</Badge>
+          {showAnalyzeButton && (
+            <Button variant="secondary" onClick={onAnalyze} loading={analyzing} className="px-3 py-1.5">
+              {analyzeLabel(analysis)}
+            </Button>
+          )}
+        </div>
+      }
     >
+      {job && profileId && (
+        <div className="mb-4">
+          <MatchImprovementBanner
+            job={job}
+            analysis={analysis}
+            profileId={profileId}
+            jobAnalyses={jobAnalyses}
+            onReAnalyze={onAnalyze}
+            analyzing={analyzing}
+          />
+        </div>
+      )}
+
       {analysis.status === "pending" && <AiLoadingState variant="match-full" size="md" />}
 
       {analysis.status === "failed" && (

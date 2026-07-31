@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
-import type { JobExtraction } from "../types";
+import type { JobExtraction, MatchAnalysis } from "../types";
 import { AiLoadingState, PageLoader } from "../components/AiLoadingState";
 import { Layout } from "../components/Layout";
 import { JobDetailTabs, type JobDetailTab } from "../components/JobDetailTabs";
@@ -57,6 +57,7 @@ export function JobDetailPage() {
     jobText: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [jobAnalyses, setJobAnalyses] = useState<MatchAnalysis[]>([]);
 
   const refreshJob = useCallback(async () => {
     if (!id) return;
@@ -64,12 +65,29 @@ export function JobDetailPage() {
     setJob(updated);
   }, [id, setJob]);
 
+  const refreshJobAnalyses = useCallback(async () => {
+    if (!id) return;
+    const all = await api.matchAnalyses.list();
+    setJobAnalyses(all.filter((entry) => entry.profile_id === profile.id && entry.job_id === id));
+  }, [id, profile.id]);
+
   useEffect(() => {
     if (!intakeRef.current.focusMatch || loading) return;
     intakeRef.current.focusMatch = false;
     matchSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     navigate(location.pathname, { replace: true, state: null });
   }, [loading, location.pathname, navigate]);
+
+  useEffect(() => {
+    if (loading || !job) return;
+    void refreshJobAnalyses();
+  }, [loading, job, refreshJobAnalyses]);
+
+  useEffect(() => {
+    if (analysis?.status !== "completed") return;
+    void refreshJob();
+    void refreshJobAnalyses();
+  }, [analysis?.status, analysis?.id, refreshJob, refreshJobAnalyses]);
 
   async function handleAnalyze() {
     if (!job) return;
@@ -335,6 +353,8 @@ export function JobDetailPage() {
                 onJobUpdated={setJob}
                 onRefreshJob={refreshJob}
                 onReAnalyze={handleAnalyze}
+                analyzing={analyzing}
+                jobAnalyses={jobAnalyses}
                 profileId={profile.id}
               />
             </section>
@@ -354,6 +374,8 @@ export function JobDetailPage() {
                 onJobUpdated={setJob}
                 onRefreshJob={refreshJob}
                 onReAnalyze={handleAnalyze}
+                analyzing={analyzing}
+                jobAnalyses={jobAnalyses}
                 profileId={profile.id}
               />
             </section>

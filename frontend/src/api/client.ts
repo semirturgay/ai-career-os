@@ -79,10 +79,18 @@ export const api = {
       request<Profile>("/profiles", { method: "POST", body: JSON.stringify(data) }),
     update: (id: string, data: Partial<ProfileCreate>) =>
       request<Profile>(`/profiles/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
-    applyResumeSuggestions: (id: string, suggestions: ResumeSuggestion[]) =>
+    applyResumeSuggestions: (
+      id: string,
+      suggestions: ResumeSuggestion[],
+      context?: { jobId: string; matchAnalysisId: string },
+    ) =>
       request<Profile>(`/profiles/${id}/apply-resume-suggestions`, {
         method: "POST",
-        body: JSON.stringify({ suggestions }),
+        body: JSON.stringify({
+          suggestions,
+          job_id: context?.jobId,
+          match_analysis_id: context?.matchAnalysisId,
+        }),
       }),
     parseResume: (file: File) => {
       const form = new FormData();

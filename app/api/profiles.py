@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_profile_or_404
 from app.db.session import get_db
 from app.logging_config import get_logger
-from app.models import Profile
+from app.models import Job, MatchAnalysis, Profile
 from app.schemas import (
     ApplyResumeSuggestionsRequest,
     ProfileCreate,
@@ -17,6 +17,7 @@ from app.schemas import (
     ResumeParseRead,
     ResumeParseRequest,
 )
+from app.services.application_progress import mark_resume_applied
 from app.services.rag.indexing import index_profile_chunks
 from app.services.rag.retrieval import get_embedding_provider
 from app.services.resume_parser import extract_text_from_pdf
@@ -178,6 +179,30 @@ async def apply_resume_suggestions(
     await db.refresh(profile)
     await index_profile_chunks(db, profile, get_embedding_provider())
     await db.commit()
+
+    if body.job_id and body.match_analysis_id:
+        job = await db.get(Job, body.job_id)
+        analysis = await db.get(MatchAnalysis, body.match_analysis_id)
+        if (
+            job
+            and analysis
+            and analysis.profile_id == profile.id
+            and analysis.status == "completed"
+            and analysis.result
+            and analysis.result.get("depth") != "screen"
+        ):
+            score = analysis.result.get("score")
+            gaps = analysis.result.get("gaps") or []
+            if isinstance(score, (int, float)):
+                job.raw_metadata = mark_resume_applied(
+                    job.raw_metadata,
+                    analysis_id=str(analysis.id),
+                    score=float(score),
+                    gap_count=len(gaps),
+                    suggestions_count=len(body.suggestions),
+                )
+                await db.commit()
+
     logger.info(
         "Applied %d resume suggestions to profile %s",
         len(body.suggestions),

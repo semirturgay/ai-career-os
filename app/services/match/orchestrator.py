@@ -3,6 +3,7 @@ from uuid import UUID
 from app.db.session import async_session
 from app.logging_config import get_logger
 from app.models import Job, MatchAnalysis, Profile
+from app.services.application_progress import record_match_remeasurement
 from app.services.llm.base import LLMConfigurationError, LLMError
 from app.services.match.analyzer import analyze_match
 from app.services.match.result import full_result_payload
@@ -31,6 +32,12 @@ async def run_match_analysis(analysis_id: UUID) -> None:
             analysis.status = "completed"
             analysis.result = full_result_payload(result, rag_chunks=rag_chunks)
             analysis.error = None
+            job.raw_metadata = record_match_remeasurement(
+                job.raw_metadata,
+                analysis_id=str(analysis_id),
+                score=result.score,
+                gap_count=len(result.gaps),
+            )
             logger.info(
                 "Match analysis completed: id=%s score=%.1f recommendation=%s",
                 analysis_id,

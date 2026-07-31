@@ -1,24 +1,32 @@
 import { useState } from "react";
 import { api } from "../api/client";
-import type { MatchAnalysis, ResumeOptimizationResult, ResumeSuggestion } from "../types";
+import type { MatchAnalysis, ResumeOptimizationResult, ResumeSuggestion, Job } from "../types";
 import { isFullMatch } from "../lib/matches";
+import { readResumeProgress } from "../lib/matchImprovement";
 import { AiLoadingState } from "./AiLoadingState";
+import { MatchImprovementBanner } from "./MatchImprovementBanner";
 import { Badge, Button, Card, ErrorBanner } from "./ui";
 
 interface ResumeOptimizationPanelProps {
+  job: Job;
   analysis: MatchAnalysis;
   profileId: string;
-  onApplied: () => void;
+  jobAnalyses: MatchAnalysis[];
+  onApplied: () => void | Promise<void>;
   onReAnalyze: () => void;
+  analyzing?: boolean;
   flat?: boolean;
   onGenerated?: () => void;
 }
 
 export function ResumeOptimizationPanel({
+  job,
   analysis,
   profileId,
+  jobAnalyses,
   onApplied,
   onReAnalyze,
+  analyzing = false,
   flat = false,
   onGenerated,
 }: ResumeOptimizationPanelProps) {
@@ -31,6 +39,7 @@ export function ResumeOptimizationPanel({
 
   const gaps = analysis.result?.gaps ?? [];
   const canOptimize = isFullMatch(analysis) && gaps.length > 0;
+  const resumeProgress = readResumeProgress(job);
 
   async function handleGenerate() {
     setLoading(true);
@@ -68,9 +77,12 @@ export function ResumeOptimizationPanel({
     setApplying(true);
     setError(null);
     try {
-      await api.profiles.applyResumeSuggestions(profileId, suggestions);
+      await api.profiles.applyResumeSuggestions(profileId, suggestions, {
+        jobId: job.id,
+        matchAnalysisId: analysis.id,
+      });
       setApplied(true);
-      onApplied();
+      await onApplied();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to apply suggestions");
     } finally {
@@ -93,6 +105,10 @@ export function ResumeOptimizationPanel({
           <p className="text-sm text-text-muted">
             The matcher found {gaps.length} gap{gaps.length === 1 ? "" : "s"}. Generate
             honest rewrite suggestions grounded in your existing experience.
+          </p>
+          <p className="rounded-lg border border-accent/20 bg-accent/5 px-3 py-2 text-xs leading-relaxed text-text-muted">
+            After you apply suggestions, re-run deep match analysis to measure how much your
+            score improved — we track the before and after for this job.
           </p>
           <Button onClick={handleGenerate}>Generate resume suggestions</Button>
         </div>
@@ -125,17 +141,33 @@ export function ResumeOptimizationPanel({
           </div>
 
           {applied && (
-            <div className="rounded-lg border border-success/30 bg-success/5 px-4 py-3 text-sm">
-              <p className="font-medium text-success">Profile updated</p>
-              <p className="mt-1 text-text-muted">
-                Re-run match analysis to see if your score improves with the updated resume.
-              </p>
-              <Button className="mt-3" variant="secondary" onClick={onReAnalyze}>
-                Re-analyze match
-              </Button>
-            </div>
+            <p className="text-sm font-medium text-success">Profile updated with selected suggestions.</p>
+          )}
+
+          {(applied || resumeProgress) && (
+            <MatchImprovementBanner
+              job={job}
+              analysis={analysis}
+              profileId={profileId}
+              jobAnalyses={jobAnalyses}
+              onReAnalyze={onReAnalyze}
+              analyzing={analyzing}
+              prominent={applied || !!resumeProgress?.awaiting_reanalysis}
+            />
           )}
         </div>
+      )}
+
+      {!result && !loading && resumeProgress && (
+        <MatchImprovementBanner
+          job={job}
+          analysis={analysis}
+          profileId={profileId}
+          jobAnalyses={jobAnalyses}
+          onReAnalyze={onReAnalyze}
+          analyzing={analyzing}
+          prominent={!!resumeProgress.awaiting_reanalysis}
+        />
       )}
     </>
   );

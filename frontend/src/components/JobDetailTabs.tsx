@@ -25,6 +25,8 @@ interface JobDetailTabsProps {
   onJobUpdated: (job: Job) => void;
   onRefreshJob?: () => void | Promise<void>;
   onReAnalyze: () => void;
+  analyzing?: boolean;
+  jobAnalyses: MatchAnalysis[];
   profileId: string;
 }
 
@@ -66,6 +68,8 @@ export function JobDetailTabs({
   onJobUpdated,
   onRefreshJob,
   onReAnalyze,
+  analyzing = false,
+  jobAnalyses,
   profileId,
 }: JobDetailTabsProps) {
   const tabsRef = useRef<HTMLDivElement>(null);
@@ -152,8 +156,13 @@ export function JobDetailTabs({
         {activeTab === "match" && (
           <MatchResultPanel
             analysis={analysis}
+            job={job}
+            profileId={profileId}
+            jobAnalyses={jobAnalyses}
             profileName={profileName}
             jobTitle={`${job.title} @ ${job.company}`}
+            onAnalyze={onReAnalyze}
+            analyzing={analyzing}
           />
         )}
 
@@ -166,11 +175,14 @@ export function JobDetailTabs({
 
         {activeTab === "resume" && analysis && (
           <ResumeOptimizationPanel
+            job={job}
             analysis={analysis}
             profileId={profileId}
-            onApplied={() => void onRefreshJob?.()}
+            jobAnalyses={jobAnalyses}
+            onApplied={() => onRefreshJob?.()}
             onGenerated={() => void onRefreshJob?.()}
             onReAnalyze={onReAnalyze}
+            analyzing={analyzing}
           />
         )}
 
