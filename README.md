@@ -8,10 +8,10 @@
 Capture jobs from your browser with the **Chrome extension** (source-agnostic DOM read — no per-site integrations; LLM classifies and extracts on our backend), or paste descriptions in the web app. Upload or paste your resume, extract structured profile data with an LLM you control, review everything, and get **automatic explainable match analysis** — then research the company, tune your resume, and draft a cover letter.
 
 <p align="center">
-  <img src="docs/assets/demo/demo.gif" alt="AI Career OS Chrome extension demo — AI provider setup, ranked job pipeline, and job detail tabs" width="360" />
+  <img src="docs/assets/demo/demo.gif" alt="AI Career OS demo — job posting capture, profile setup with AI extract, and explainable match pipeline" width="640" />
 </p>
 
-<p align="center"><em>Chrome side panel: pick your LLM → ranked pipeline → job detail (Match / Research tabs)</em></p>
+<p align="center"><em>Job page + side panel: profile setup → resume extract → capture tab → match pipeline</em></p>
 
 ---
 
@@ -396,7 +396,8 @@ cd frontend && bun run build:extension   # Chrome extension bundle
 With the backend running and the extension UI built:
 
 ```bash
-# Animated hero GIF (side-panel walkthrough)
+# Split-screen demo: job posting (left) + side panel (right)
+# Resets demo data via Docker Postgres, mocks resume extract for the loading animation
 npm install playwright @ffmpeg-installer/ffmpeg
 npx playwright install chromium
 node scripts/capture_readme_demo_gif.mjs

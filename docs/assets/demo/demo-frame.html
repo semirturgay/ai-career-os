@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=960, initial-scale=1" />
+    <title>AI Career OS demo</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 960px;
+        height: 720px;
+        overflow: hidden;
+        background: #0f172a;
+      }
+      .shell {
+        display: flex;
+        width: 960px;
+        height: 720px;
+      }
+      .job-pane {
+        width: 560px;
+        height: 720px;
+        border: 0;
+        background: #fff;
+      }
+      .panel-pane {
+        width: 400px;
+        height: 720px;
+        border: 0;
+        border-left: 1px solid rgba(148, 163, 184, 0.35);
+        background: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <iframe
+        class="job-pane"
+        title="Job posting"
+        src="/demo/job-posting.html"
+      ></iframe>
+      <iframe class="panel-pane" id="panel" title="AI Career OS side panel" src="/#/welcome"></iframe>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Senior Backend Engineer — FinTech Labs</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #15372c;
+        --muted: #5f6b66;
+        --accent: #008561;
+        --border: #e6ece9;
+        --surface: #f8faf9;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+        color: var(--ink);
+        background: #fff;
+        line-height: 1.55;
+      }
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 28px;
+        border-bottom: 1px solid var(--border);
+        background: #fff;
+      }
+      .logo {
+        font-weight: 700;
+        font-size: 15px;
+        letter-spacing: -0.02em;
+      }
+      .logo span {
+        color: var(--accent);
+      }
+      .apply-btn {
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        border-radius: 999px;
+        padding: 10px 18px;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .hero {
+        background: linear-gradient(180deg, var(--surface) 0%, #fff 100%);
+        border-bottom: 1px solid var(--border);
+        padding: 36px 28px 28px;
+      }
+      .company {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      h1 {
+        margin: 10px 0 8px;
+        font-size: 34px;
+        line-height: 1.15;
+        letter-spacing: -0.03em;
+      }
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .meta span::before {
+        content: "•";
+        margin-right: 14px;
+        color: #c5d0cb;
+      }
+      .meta span:first-child::before {
+        content: none;
+      }
+      main {
+        max-width: 720px;
+        padding: 28px;
+      }
+      h2 {
+        margin: 28px 0 10px;
+        font-size: 18px;
+      }
+      p,
+      li {
+        font-size: 15px;
+        color: #24312c;
+      }
+      ul {
+        padding-left: 20px;
+      }
+      li {
+        margin: 8px 0;
+      }
+      .pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 16px;
+      }
+      .pill {
+        border: 1px solid var(--border);
+        background: var(--surface);
+        border-radius: 999px;
+        padding: 6px 12px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="logo">FinTech <span>Labs</span></div>
+      <button class="apply-btn" type="button">Apply for this job</button>
+    </header>
+
+    <section class="hero">
+      <p class="company">FinTech Labs</p>
+      <h1>Senior Backend Engineer</h1>
+      <div class="meta">
+        <span>Remote</span>
+        <span>Engineering</span>
+        <span>Full-time</span>
+      </div>
+      <div class="pill-row">
+        <span class="pill">Python</span>
+        <span class="pill">FastAPI</span>
+        <span class="pill">PostgreSQL</span>
+        <span class="pill">Payments</span>
+      </div>
+    </section>
+
+    <main>
+      <p>
+        We are looking for a Senior Backend Engineer to build high-scale payment APIs for our
+        global financial platform. You will design services in Python, collaborate with product
+        teams, and own production systems end to end.
+      </p>
+
+      <h2>What you'll do</h2>
+      <ul>
+        <li>Design and ship REST and GraphQL APIs used by millions of transactions daily</li>
+        <li>Partner with platform teams on observability, reliability, and deployment tooling</li>
+        <li>Mentor engineers and raise the bar on system design reviews</li>
+      </ul>
+
+      <h2>Requirements</h2>
+      <ul>
+        <li>5+ years of professional Python experience</li>
+        <li>Strong experience with FastAPI or similar async web frameworks</li>
+        <li>PostgreSQL and query optimization</li>
+        <li>REST or GraphQL API design</li>
+        <li>Experience with Docker and CI/CD pipelines</li>
+      </ul>
+
+      <h2>Nice to have</h2>
+      <ul>
+        <li>AWS or cloud infrastructure experience</li>
+        <li>Financial services or payments domain</li>
+      </ul>
+    </main>
+  </body>
+</html>
