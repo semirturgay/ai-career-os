@@ -18,20 +18,19 @@ export function HomePage() {
   const [analyses, setAnalyses] = useState<MatchAnalysis[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
 
-  const refreshAnalyses = useCallback(async () => {
-    const analysisList = await api.matchAnalyses.list();
+  const refreshPipeline = useCallback(async () => {
+    const [jobList, analysisList] = await Promise.all([
+      api.jobs.list(),
+      api.matchAnalyses.list(),
+    ]);
+    setJobs(jobList);
     setAnalyses(analysisList.filter((a) => a.profile_id === profile.id));
   }, [profile.id]);
 
   useEffect(() => {
     async function load() {
       try {
-        const [jobList, analysisList] = await Promise.all([
-          api.jobs.list(),
-          api.matchAnalyses.list(),
-        ]);
-        setJobs(jobList);
-        setAnalyses(analysisList.filter((a) => a.profile_id === profile.id));
+        await refreshPipeline();
       } catch (err) {
         console.error(err);
       } finally {
@@ -39,10 +38,10 @@ export function HomePage() {
       }
     }
     load();
-  }, [profile.id]);
+  }, [refreshPipeline]);
 
   const pendingCount = pendingAnalysesCount(analyses, profile.id);
-  usePolling(refreshAnalyses, pendingCount > 0);
+  usePolling(refreshPipeline, pendingCount > 0);
   const isEmptyPipeline = jobs.length === 0;
 
   if (dataLoading) {

@@ -1,8 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import type { CompanyBrief, Job, MatchAnalysis } from "../types";
+import {
+  getApplicationProgress,
+  nextApplicationTab,
+  type JobDetailTab as ApplicationJobDetailTab,
+} from "../lib/applicationProgress";
 import { isFullMatch } from "../lib/matches";
 import { CompanyResearchPanel } from "./CompanyResearchPanel";
 import { CoverLetterPanel } from "./CoverLetterPanel";
+import { JobProgressBar } from "./JobProgressBar";
 import { MatchResultPanel } from "./MatchResultPanel";
 import { MatchAnalysisProgress } from "./MatchAnalysisProgress";
 import { ResumeOptimizationPanel } from "./ResumeOptimizationPanel";
@@ -14,41 +20,40 @@ interface JobDetailTabsProps {
   analysis: MatchAnalysis | null;
   profileName: string;
   showProgress?: boolean;
+  initialTab?: JobDetailTab;
+  focusNextStep?: boolean;
   onJobUpdated: (job: Job) => void;
+  onRefreshJob?: () => void | Promise<void>;
   onReAnalyze: () => void;
   profileId: string;
 }
 
-const TABS: { id: JobDetailTab; label: string; shortLabel: string; description: string }[] = [
-  {
-    id: "match",
-    label: "Match analysis",
-    shortLabel: "Match",
+const TAB_COPY: Record<JobDetailTab, { title: string; description: string }> = {
+  match: {
+    title: "Match analysis",
     description: "Explainable fit score, strengths, and gaps",
   },
-  {
-    id: "company",
-    label: "Company research",
-    shortLabel: "Research",
+  company: {
+    title: "Company research",
     description: "Culture, news, and interview signals from the web",
   },
-  {
-    id: "resume",
-    label: "Resume improvements",
-    shortLabel: "Resume",
+  resume: {
+    title: "Resume improvements",
     description: "AI suggestions tailored to this job's gaps",
   },
-  {
-    id: "cover",
-    label: "Cover letter",
-    shortLabel: "Cover letter",
+  cover: {
+    title: "Cover letter",
     description: "Short, targeted draft you can copy and edit",
   },
-];
+};
 
 function tabUnlocked(tab: JobDetailTab, analysis: MatchAnalysis | null): boolean {
-  if (tab === "match") return !!analysis;
+  if (tab === "match") return true;
   return isFullMatch(analysis);
+}
+
+function tabEnabled(tab: JobDetailTab, analysis: MatchAnalysis | null): boolean {
+  return tabUnlocked(tab, analysis);
 }
 
 export function JobDetailTabs({
@@ -56,139 +61,121 @@ export function JobDetailTabs({
   analysis,
   profileName,
   showProgress = false,
+  initialTab = "match",
+  focusNextStep = false,
   onJobUpdated,
+  onRefreshJob,
   onReAnalyze,
   profileId,
 }: JobDetailTabsProps) {
   const tabsRef = useRef<HTMLDivElement>(null);
   const prevStatusRef = useRef(analysis?.status);
-  const [activeTab, setActiveTab] = useState<JobDetailTab>("match");
-  const [actionsReady, setActionsReady] = useState(false);
+  const tailoredRef = useRef(false);
+  const [activeTab, setActiveTab] = useState<JobDetailTab>(initialTab);
 
   const analysisComplete = isFullMatch(analysis);
-  const visibleTabs = analysisComplete ? TABS : TABS.filter((tab) => tab.id === "match");
+  const applicationProgress = getApplicationProgress(job, analysis);
+  const tabCopy = TAB_COPY[activeTab];
 
   useEffect(() => {
-    if (!analysisComplete) {
+    if (!analysisComplete && activeTab !== "match") {
       setActiveTab("match");
     }
-  }, [analysisComplete]);
+  }, [analysisComplete, activeTab]);
+
+  useEffect(() => {
+    if (initialTab !== "match" && tabUnlocked(initialTab, analysis)) {
+      setActiveTab(initialTab);
+      tailoredRef.current = true;
+    }
+  }, [initialTab, analysis]);
+
+  useEffect(() => {
+    if (tailoredRef.current || !focusNextStep || !analysisComplete) return;
+    const nextTab = nextApplicationTab(job, analysis);
+    if (nextTab !== "match") {
+      setActiveTab(nextTab);
+      tailoredRef.current = true;
+    }
+  }, [focusNextStep, analysisComplete, job, analysis]);
 
   useEffect(() => {
     const wasPending = prevStatusRef.current === "pending";
     const nowComplete = analysis?.status === "completed";
-    if (wasPending && nowComplete) {
-      setActionsReady(true);
-      setActiveTab("match");
-      window.setTimeout(() => setActionsReady(false), 6000);
+    if (wasPending && nowComplete && isFullMatch(analysis)) {
+      if (focusNextStep && !tailoredRef.current) {
+        const nextTab = nextApplicationTab(job, analysis);
+        if (nextTab !== "match") {
+          setActiveTab(nextTab);
+          tailoredRef.current = true;
+        }
+      }
     }
     prevStatusRef.current = analysis?.status;
-  }, [analysis?.status]);
+  }, [analysis, focusNextStep, job]);
 
-  function handleTabClick(tab: JobDetailTab) {
+  function handleStepSelect(tab: JobDetailTab) {
     if (!tabUnlocked(tab, analysis)) return;
     setActiveTab(tab);
   }
 
   return (
     <div ref={tabsRef} id="job-tools" className="scroll-mt-4 space-y-4">
-      {showProgress && <MatchAnalysisProgress analysis={analysis} showUnlocks={analysisComplete} />}
-
-      {analysisComplete && (
-        <div className="sticky top-0 z-10 -mx-4 border-b border-border bg-surface/95 px-4 lg:-mx-8 lg:px-8">
-          <div
-            className="flex gap-x-3 overflow-x-auto sm:gap-x-6 lg:gap-x-8 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            role="tablist"
-            aria-label="Job tools"
-          >
-            {visibleTabs.map((tab) => {
-              const active = activeTab === tab.id;
-              const isActionTab = tab.id !== "match";
-              const highlight = actionsReady && isActionTab;
-
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  onClick={() => handleTabClick(tab.id)}
-                  className={`group relative shrink-0 border-b-2 px-2.5 py-2.5 transition sm:px-3 ${
-                    active
-                      ? "border-accent text-text"
-                      : "border-transparent text-text-muted hover:border-border hover:text-text"
-                  } ${highlight ? "ring-1 ring-accent/40 ring-offset-2 ring-offset-surface rounded-t-md" : ""}`}
-                >
-                  <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] font-medium sm:text-sm">
-                    {tab.shortLabel}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+      {analysis && (
+        <section className="rounded-xl border border-border bg-surface-raised px-3 py-3">
+          <JobProgressBar
+            progress={applicationProgress}
+            activeTab={activeTab}
+            onStepSelect={handleStepSelect}
+            isStepEnabled={(tab: ApplicationJobDetailTab) => tabEnabled(tab, analysis)}
+            compact
+          />
+        </section>
       )}
+
+      {showProgress && <MatchAnalysisProgress analysis={analysis} showUnlocks={analysisComplete} />}
 
       {!analysisComplete && analysis?.status === "pending" && (
         <p className="text-sm text-text-muted">
-          Match analysis running — company research, resume improvements, and cover letter unlock
-          when full analysis completes.
+          Match analysis running — follow-up steps unlock when full analysis completes.
         </p>
       )}
 
-      <div role="tabpanel" className="min-h-[200px]">
-        {activeTab === "match" && (
-          <div className="space-y-3">
-            {analysisComplete && (
-              <div className="hidden lg:block">
-                <h3 className="text-lg font-semibold">{TABS[0].label}</h3>
-                <p className="text-sm text-text-muted">{TABS[0].description}</p>
-              </div>
-            )}
-            <MatchResultPanel
-              analysis={analysis}
-              profileName={profileName}
-              jobTitle={`${job.title} @ ${job.company}`}
-            />
+      <div role="tabpanel" className="min-h-[200px] space-y-3">
+        {activeTab !== "match" && (
+          <div>
+            <h3 className="text-base font-semibold">{tabCopy.title}</h3>
+            <p className="text-sm text-text-muted">{tabCopy.description}</p>
           </div>
+        )}
+
+        {activeTab === "match" && (
+          <MatchResultPanel
+            analysis={analysis}
+            profileName={profileName}
+            jobTitle={`${job.title} @ ${job.company}`}
+          />
         )}
 
         {activeTab === "company" && (
-          <div className="space-y-3">
-            <div>
-              <h3 className="text-lg font-semibold">{TABS[1].label}</h3>
-              <p className="text-sm text-text-muted">{TABS[1].description}</p>
-            </div>
-            <CompanyResearchPanel
-              job={job}
-              onUpdated={(brief: CompanyBrief) => onJobUpdated({ ...job, company_brief: brief })}
-            />
-          </div>
+          <CompanyResearchPanel
+            job={job}
+            onUpdated={(brief: CompanyBrief) => onJobUpdated({ ...job, company_brief: brief })}
+          />
         )}
 
         {activeTab === "resume" && analysis && (
-          <div className="space-y-3">
-            <div>
-              <h3 className="text-lg font-semibold">{TABS[2].label}</h3>
-              <p className="text-sm text-text-muted">{TABS[2].description}</p>
-            </div>
-            <ResumeOptimizationPanel
-              analysis={analysis}
-              profileId={profileId}
-              onApplied={() => {}}
-              onReAnalyze={onReAnalyze}
-            />
-          </div>
+          <ResumeOptimizationPanel
+            analysis={analysis}
+            profileId={profileId}
+            onApplied={() => void onRefreshJob?.()}
+            onGenerated={() => void onRefreshJob?.()}
+            onReAnalyze={onReAnalyze}
+          />
         )}
 
         {activeTab === "cover" && analysis && (
-          <div className="space-y-3">
-            <div>
-              <h3 className="text-lg font-semibold">{TABS[3].label}</h3>
-              <p className="text-sm text-text-muted">{TABS[3].description}</p>
-            </div>
-            <CoverLetterPanel analysis={analysis} />
-          </div>
+          <CoverLetterPanel analysis={analysis} onGenerated={() => void onRefreshJob?.()} />
         )}
       </div>
     </div>

@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { JobExtraction } from "../types";
 import { AiLoadingState, PageLoader } from "../components/AiLoadingState";
 import { Layout } from "../components/Layout";
-import { JobDetailTabs } from "../components/JobDetailTabs";
+import { JobDetailTabs, type JobDetailTab } from "../components/JobDetailTabs";
 import { useProfileRoute } from "../components/RequireProfileLayout";
 import { useJobDetail } from "../hooks/useJobDetail";
 import { useMatchAnalysis } from "../hooks/useMatchAnalysis";
@@ -15,12 +15,15 @@ import {
 } from "../lib/jobExtraction";
 import { Badge, Button, ErrorBanner } from "../components/ui";
 import { DuplicateJobBanner } from "../components/DuplicateJobBanner";
+import { useEmbeddedMode } from "../hooks/useEmbeddedMode";
 import type { DuplicateJobInfo } from "../lib/jobUrl";
 
 interface JobDetailLocationState {
   focusMatch?: boolean;
   fromIntake?: boolean;
+  fromPipeline?: boolean;
   matchAnalysisId?: string;
+  focusTab?: JobDetailTab;
   duplicateCapture?: boolean;
   existingJob?: DuplicateJobInfo;
 }
@@ -29,6 +32,7 @@ export function JobDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const embedded = useEmbeddedMode();
   const detailState = location.state as JobDetailLocationState | null;
   const duplicateCapture = detailState?.duplicateCapture ?? false;
   const duplicateJob = detailState?.existingJob ?? null;
@@ -53,6 +57,12 @@ export function JobDetailPage() {
     jobText: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const refreshJob = useCallback(async () => {
+    if (!id) return;
+    const updated = await api.jobs.get(id);
+    setJob(updated);
+  }, [id, setJob]);
 
   useEffect(() => {
     if (!intakeRef.current.focusMatch || loading) return;
@@ -146,8 +156,12 @@ export function JobDetailPage() {
         : "Analyze match";
 
   const fromIntake = intakeRef.current.fromIntake;
+  const fromPipeline = detailState?.fromPipeline ?? (embedded && !fromIntake);
+  const focusTab = detailState?.focusTab;
+  const focusNextStep = fromPipeline && !focusTab && !fromIntake;
+  const matchFirst = embedded || fromIntake;
 
-  const jobDetailsSection = fromIntake ? (
+  const jobDetailsSection = matchFirst ? (
     <details className="rounded-xl border border-border bg-surface-raised">
       <summary className="cursor-pointer px-5 py-4 text-sm font-medium text-text hover:bg-surface-overlay/50">
         Job description · {job.company}
@@ -308,7 +322,7 @@ export function JobDetailPage() {
 
         {reExtracting && <AiLoadingState variant="job-extract" size="sm" />}
 
-        {fromIntake ? (
+        {matchFirst ? (
           <>
             <section ref={matchSectionRef}>
               <JobDetailTabs
@@ -316,7 +330,10 @@ export function JobDetailPage() {
                 analysis={analysis}
                 profileName={profile.name}
                 showProgress={fromIntake || analysisPending}
+                initialTab={focusTab}
+                focusNextStep={focusNextStep}
                 onJobUpdated={setJob}
+                onRefreshJob={refreshJob}
                 onReAnalyze={handleAnalyze}
                 profileId={profile.id}
               />
@@ -332,7 +349,10 @@ export function JobDetailPage() {
                 analysis={analysis}
                 profileName={profile.name}
                 showProgress={fromIntake || analysisPending}
+                initialTab={focusTab}
+                focusNextStep={focusNextStep}
                 onJobUpdated={setJob}
+                onRefreshJob={refreshJob}
                 onReAnalyze={handleAnalyze}
                 profileId={profile.id}
               />

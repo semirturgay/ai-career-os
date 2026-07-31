@@ -65,8 +65,8 @@ export function MatchAnalysisProgress({ analysis, showUnlocks = false }: MatchAn
 
       {showUnlocks && step === 1 && analysis.status === "completed" && (
         <p className="mt-3 text-sm text-text-muted">
-          Full analysis ready — review your score and evidence below. Research, resume, and cover
-          letter tabs are unlocked when you&apos;re ready.
+          Full analysis ready — continue with research, resume tailoring, and cover letter to
+          complete your pipeline progress.
         </p>
       )}
     </div>

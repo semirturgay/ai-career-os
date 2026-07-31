@@ -14,6 +14,7 @@ from app.schemas import (
     ResumeOptimizationResult,
 )
 from app.schemas.enums import MatchDepth
+from app.services.application_progress import STEP_COVER_LETTER, STEP_RESUME, mark_application_step
 from app.services.cover_letter_generator import generate_cover_letter
 from app.services.match import (
     match_result_for_cover_letter,
@@ -102,7 +103,10 @@ async def create_resume_optimization(
     if not match_result.gaps:
         raise HTTPException(status_code=400, detail="No gaps to optimize against")
 
-    return await optimize_resume_for_match(db, profile, job, match_result)
+    result = await optimize_resume_for_match(db, profile, job, match_result)
+    job.raw_metadata = mark_application_step(job.raw_metadata, STEP_RESUME)
+    await db.commit()
+    return result
 
 
 @router.post(
@@ -129,4 +133,7 @@ async def create_cover_letter(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    return await generate_cover_letter(db, profile, job, match_result)
+    result = await generate_cover_letter(db, profile, job, match_result)
+    job.raw_metadata = mark_application_step(job.raw_metadata, STEP_COVER_LETTER)
+    await db.commit()
+    return result

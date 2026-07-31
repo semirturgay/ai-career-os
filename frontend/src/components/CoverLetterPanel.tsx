@@ -7,9 +7,11 @@ import { Button, Card, ErrorBanner } from "./ui";
 
 interface CoverLetterPanelProps {
   analysis: MatchAnalysis;
+  flat?: boolean;
+  onGenerated?: () => void;
 }
 
-export function CoverLetterPanel({ analysis }: CoverLetterPanelProps) {
+export function CoverLetterPanel({ analysis, flat = false, onGenerated }: CoverLetterPanelProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [letter, setLetter] = useState<CoverLetterResult | null>(null);
@@ -22,6 +24,7 @@ export function CoverLetterPanel({ analysis }: CoverLetterPanelProps) {
     try {
       const result = await api.matchAnalyses.generateCoverLetter(analysis.id);
       setLetter(result);
+      onGenerated?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate cover letter");
     } finally {
@@ -34,13 +37,10 @@ export function CoverLetterPanel({ analysis }: CoverLetterPanelProps) {
     await navigator.clipboard.writeText(letter.body);
   }
 
-  return (
-    <Card
-      title="Cover letter"
-      description="Draft → critique → revise — max 400 characters"
-    >
+  const content = (
+    <>
       {error && (
-        <div className="mb-4">
+        <div className={flat ? "mb-3" : "mb-4"}>
           <ErrorBanner message={error} />
         </div>
       )}
@@ -75,6 +75,19 @@ export function CoverLetterPanel({ analysis }: CoverLetterPanelProps) {
           </div>
         </div>
       )}
+    </>
+  );
+
+  if (flat) {
+    return <div>{content}</div>;
+  }
+
+  return (
+    <Card
+      title="Cover letter"
+      description="Draft → critique → revise — max 400 characters"
+    >
+      {content}
     </Card>
   );
 }

@@ -7,6 +7,8 @@ import { Button, Card, ErrorBanner } from "./ui";
 interface CompanyResearchPanelProps {
   job: Job;
   onUpdated: (brief: CompanyBrief) => void;
+  flat?: boolean;
+  onComplete?: () => void;
 }
 
 function BulletList({ items, emptyLabel }: { items: string[]; emptyLabel?: string }) {
@@ -22,7 +24,12 @@ function BulletList({ items, emptyLabel }: { items: string[]; emptyLabel?: strin
   );
 }
 
-export function CompanyResearchPanel({ job, onUpdated }: CompanyResearchPanelProps) {
+export function CompanyResearchPanel({
+  job,
+  onUpdated,
+  flat = false,
+  onComplete,
+}: CompanyResearchPanelProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [brief, setBrief] = useState<CompanyBrief | null>(job.company_brief ?? null);
@@ -34,6 +41,7 @@ export function CompanyResearchPanel({ job, onUpdated }: CompanyResearchPanelPro
       const result = await api.jobs.researchCompany(job.id);
       setBrief(result);
       onUpdated(result);
+      onComplete?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to research company");
     } finally {
@@ -41,13 +49,10 @@ export function CompanyResearchPanel({ job, onUpdated }: CompanyResearchPanelPro
     }
   }
 
-  return (
-    <Card
-      title="Company research"
-      description="Agent-guided web search → synthesize brief with sources"
-    >
+  const content = (
+    <>
       {error && (
-        <div className="mb-4">
+        <div className={flat ? "mb-3" : "mb-4"}>
           <ErrorBanner message={error} />
         </div>
       )}
@@ -128,6 +133,19 @@ export function CompanyResearchPanel({ job, onUpdated }: CompanyResearchPanelPro
           </div>
         </div>
       )}
+    </>
+  );
+
+  if (flat) {
+    return <div>{content}</div>;
+  }
+
+  return (
+    <Card
+      title="Company research"
+      description="Agent-guided web search → synthesize brief with sources"
+    >
+      {content}
     </Card>
   );
 }

@@ -10,6 +10,8 @@ interface ResumeOptimizationPanelProps {
   profileId: string;
   onApplied: () => void;
   onReAnalyze: () => void;
+  flat?: boolean;
+  onGenerated?: () => void;
 }
 
 export function ResumeOptimizationPanel({
@@ -17,6 +19,8 @@ export function ResumeOptimizationPanel({
   profileId,
   onApplied,
   onReAnalyze,
+  flat = false,
+  onGenerated,
 }: ResumeOptimizationPanelProps) {
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
@@ -36,6 +40,7 @@ export function ResumeOptimizationPanel({
       setResult(optimization);
       setSelected(new Set(optimization.suggestions.map((_, index) => index)));
       setApplied(false);
+      onGenerated?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate suggestions");
     } finally {
@@ -75,13 +80,10 @@ export function ResumeOptimizationPanel({
 
   if (!canOptimize) return null;
 
-  return (
-    <Card
-      title="Resume improvements"
-      description="Tailor your profile to close gaps for this job — review before applying"
-    >
+  const content = (
+    <>
       {error && (
-        <div className="mb-4">
+        <div className={flat ? "mb-3" : "mb-4"}>
           <ErrorBanner message={error} />
         </div>
       )}
@@ -135,6 +137,19 @@ export function ResumeOptimizationPanel({
           )}
         </div>
       )}
+    </>
+  );
+
+  if (flat) {
+    return <div>{content}</div>;
+  }
+
+  return (
+    <Card
+      title="Resume improvements"
+      description="Tailor your profile to close gaps for this job — review before applying"
+    >
+      {content}
     </Card>
   );
 }

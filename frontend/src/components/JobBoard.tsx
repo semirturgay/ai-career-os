@@ -7,9 +7,11 @@ import {
   recommendationVariant,
   scoreFromResult,
 } from "../lib/matches";
+import { getApplicationProgress, nextApplicationTab, progressSummary } from "../lib/applicationProgress";
 import { useEmbeddedMode } from "../hooks/useEmbeddedMode";
 import { IS_EXTENSION } from "../lib/extensionRuntime";
 import { ExtensionEmptyPipeline } from "./ExtensionEmptyPipeline";
+import { JobProgressBar } from "./JobProgressBar";
 import { Badge, Button } from "./ui";
 import { ScoreRing } from "./ScoreRing";
 
@@ -52,11 +54,13 @@ function JobOpportunityCard({ job, analysis, compact, rank }: JobOpportunityCard
   const rec = hasMatchResult(analysis) ? analysis?.result?.recommendation : undefined;
   const recLabel = recommendationLabel(rec);
   const summary = hasMatchResult(analysis) ? analysis?.result?.summary : null;
+  const progress = getApplicationProgress(job, analysis);
 
   return (
     <li>
       <Link
         to={`/jobs/${job.id}`}
+        state={{ fromPipeline: true }}
         className={`group block rounded-xl border border-border bg-surface-raised transition hover:border-accent/30 hover:shadow-sm ${
           compact ? "border-l-[3px] p-3" : "border-l-4 p-4"
         } ${scoreAccentClass(score)}`}
@@ -109,14 +113,20 @@ function JobOpportunityCard({ job, analysis, compact, rank }: JobOpportunityCard
               ) : (
                 <Badge variant="default">Not analyzed</Badge>
               )}
-              {job.source && compact && (
-                <span className="truncate text-[11px] text-text-muted">via {job.source}</span>
-              )}
+              <span className="text-[11px] text-text-muted">{progressSummary(progress)}</span>
             </div>
 
             {summary && !pending && (
               <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-text-muted">{summary}</p>
             )}
+
+            <div className="mt-2.5">
+              <JobProgressBar
+                progress={progress}
+                activeTab={nextApplicationTab(job, analysis)}
+                compact={compact}
+              />
+            </div>
           </div>
         </div>
       </Link>
