@@ -1,0 +1,5 @@
+{
+  "expect_page_type": "job_detail",
+  "expect_capturable": true,
+  "user_message_contains": "detected"
+}

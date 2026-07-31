@@ -43,6 +43,13 @@ async function parseJobText(apiBaseUrl, text) {
   });
 }
 
+async function classifyJobCapture(apiBaseUrl, payload) {
+  return apiRequest(apiBaseUrl, "/jobs/classify-capture", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 async function createIntakeHandoff(apiBaseUrl, payload) {
   return apiRequest(apiBaseUrl, "/jobs/intake-handoff", {
     method: "POST",

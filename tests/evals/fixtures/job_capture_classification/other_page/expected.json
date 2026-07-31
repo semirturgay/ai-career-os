@@ -1,0 +1,5 @@
+{
+  "expect_page_type": "other",
+  "expect_capturable": false,
+  "user_message_contains": "job posting"
+}

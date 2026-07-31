@@ -13,7 +13,7 @@ Incremental build plan. Each milestone adds one capability and is validated befo
 | 4 | [Resume optimization](m4-resume-optimization.md) | Reflection, iterative refinement | **Done** |
 | 5 | [Progressive match + cover letter](m5-progressive-match-cover-letter.md) | Staged inference, reflection chain | **Done** |
 | 6 | [Company research](m6-company-research.md) | Bounded agent loop, web search | **Done** |
-| 7 | Job discovery | Browser extension capture (DOM only), paste resume | **In progress** |
+| 7 | Job discovery | Source-agnostic extension capture (DOM + LLM classify), paste resume | **In progress** |
 | 8 | Memory + feedback loop | Long-term memory, learning from feedback | Planned |
 | 9 | Interview preparation | Multi-step planning, structured curricula | Planned |
 | 10 | Application automation | Human-in-the-loop, guardrails | Planned |
@@ -30,7 +30,7 @@ Milestones 4–10 are directional. Each depends on eval results from the previou
 
 **Problem:** Users paste jobs one at a time; discovery should happen where they already browse.
 
-**Direction:** Chrome extension reads the **active tab DOM only** — never fetches job URLs. Auto-detect job pages, capture → parse → review → match. Side panel embeds the app; paste resume replaces PDF as primary onboarding.
+**Direction:** Chrome extension reads generic visible text from the **active tab DOM only** — never fetches job URLs, no per-site extractors. Backend LLM classifies (single job posting?) then extracts → review → match. Side panel embeds the app; paste resume is primary onboarding.
 
 See [extension.md](../extension.md) and [extension/README.md](../../extension/README.md).
 

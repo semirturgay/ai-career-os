@@ -1,4 +1,4 @@
-"""Unit tests for extension page extractors (loaded as plain JS)."""
+"""Unit tests for generic extension page text capture."""
 
 from pathlib import Path
 
@@ -12,10 +12,10 @@ def test_greenhouse_fixture_exists():
     assert "FinTech Labs" in html
 
 
-def test_extractors_script_defines_detect_job_source():
+def test_extractors_script_is_provider_agnostic():
     script = (REPO_ROOT / "extension/content/extractors.js").read_text(encoding="utf-8")
-    assert "function detectJobSource" in script
+    assert "function extractVisiblePageText" in script
     assert "function extractJobPage" in script
-    assert 'source === "greenhouse"' in script
-    assert "function extractLinkedIn" in script
-    assert "function resolveCaptureUrl" in script
+    assert "function extractGreenhouse" not in script
+    assert "function detectJobSource" not in script
+    assert "linkedin.com" not in script.lower()

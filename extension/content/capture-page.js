@@ -1,8 +1,7 @@
 function captureJobPage() {
-  const capture = extractJobPage(window.location.href);
+  const capture = extractVisiblePageText();
   return {
     ...capture,
-    url: resolveCaptureUrl(window.location.href),
-    pageTitle: document.title || "",
+    url: window.location.href,
   };
 }

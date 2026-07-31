@@ -102,6 +102,12 @@ class JobParseRequest(BaseModel):
     text: str = Field(min_length=100, max_length=100_000)
 
 
+class JobCaptureClassifyRequest(BaseModel):
+    text: str = Field(min_length=50, max_length=150_000)
+    page_title: str | None = Field(default=None, max_length=500)
+    page_url: str | None = Field(default=None, max_length=2048)
+
+
 class JobParseRead(BaseModel):
     job_text: str
     structured_data: JobExtraction

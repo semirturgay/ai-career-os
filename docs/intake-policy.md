@@ -29,3 +29,16 @@ This applies to the Chrome extension, backend job/resume intake, and any future 
 - [docs/vision.md](../docs/vision.md) — guiding principle #6
 
 When adding intake features, ask: *“Does this read what the user already sees, or does it fetch a third-party page?”* If the latter, reject it.
+
+## Source-agnostic capture
+
+We do **not** integrate with, special-case, or maintain extractors for any job board or ATS (LinkedIn, Greenhouse, Wellfound, Lever, etc.).
+
+| Layer | Responsibility |
+|-------|------------------|
+| **Extension** | Read generic visible text from the active tab (strip nav/footer noise only) |
+| **Backend LLM** | Classify whether the capture is a single job posting; extract structured fields |
+
+Capture validation and field extraction are **LLM tasks** (`POST /jobs/classify-capture`, `POST /jobs/parse-text`) — not hostname rules, CSS selector maps, or heuristics about “what a job page looks like.”
+
+Paste intake skips classification: the user explicitly provides job text.

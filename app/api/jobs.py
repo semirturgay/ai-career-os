@@ -12,6 +12,7 @@ from app.models import Job, MatchAnalysis, Profile
 from app.schemas import (
     CompanyBrief,
     JobByUrlRead,
+    JobCaptureClassifyRequest,
     JobCreate,
     JobCreateRead,
     JobIntakeHandoffCreate,
@@ -21,7 +22,9 @@ from app.schemas import (
     JobRead,
     JobUpdate,
 )
+from app.schemas.job_capture import JobCaptureClassification
 from app.services.company_research import company_brief_to_storage, research_company
+from app.services.job_capture_classifier import classify_job_capture
 from app.services.job_intake_handoff import create_handoff, get_handoff
 from app.services.job_paste_parser import prepare_job_post_text
 from app.services.job_structurer import structure_job
@@ -122,6 +125,24 @@ async def parse_job_text(body: JobParseRequest, db: AsyncSession = Depends(get_d
         len(extraction.requirements),
     )
     return JobParseRead(job_text=job_text, structured_data=extraction)
+
+
+@router.post("/jobs/classify-capture", response_model=JobCaptureClassification)
+async def classify_captured_job_text(
+    body: JobCaptureClassifyRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    logger.info(
+        "Classifying captured job page text (%d chars, title=%r)",
+        len(body.text),
+        body.page_title,
+    )
+    return await classify_job_capture(
+        db,
+        body.text,
+        page_title=body.page_title,
+        page_url=body.page_url,
+    )
 
 
 @router.get("/jobs/by-url", response_model=JobByUrlRead)

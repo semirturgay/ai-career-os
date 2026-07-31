@@ -1,0 +1,21 @@
+Senior Backend Engineer
+FinTech Labs · Remote · Full-time
+
+About the role
+
+We are looking for a Senior Backend Engineer to build high-scale payment APIs for our
+global financial platform. You will design services in Python, collaborate with product
+teams, and own production systems end to end.
+
+Requirements
+
+- 5+ years of professional Python experience
+- Strong experience with FastAPI or similar async web frameworks
+- PostgreSQL and query optimization
+- REST or GraphQL API design
+- Experience with Docker and CI/CD pipelines
+
+Nice to have
+
+- AWS or cloud infrastructure experience
+- Financial services or payments domain knowledge

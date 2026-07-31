@@ -21,6 +21,7 @@ flowchart LR
 
     subgraph llm [LLM tasks]
         RE[ResumeExtraction]
+        JC[JobCaptureClassification]
         JE[JobExtraction]
         SM[ScreenMatch]
         MA[MatchResult]
@@ -40,6 +41,8 @@ flowchart LR
     end
 
     PDF --> RE
+    JD --> JC
+    JC --> JE
     JD --> JE
     RE --> MA
     JE --> MA
@@ -66,6 +69,7 @@ flowchart LR
 |------|--------|--------|------------|
 | Resume extraction | `ResumeExtraction` | `resume_extraction.txt` | `resume_extraction_normalize.py` |
 | Job extraction | `JobExtraction` | `job_extraction.txt` | `job_extraction_normalize.py` |
+| Job capture classification | `JobCaptureClassification` | `job_capture_classification.txt` | — |
 | Match analysis | `MatchResult` | `match_analysis.txt` | `match_analysis_normalize.py` |
 | Screen match | `BatchScreeningResult` | `batch_screen_match.txt` | — |
 | Resume optimization | `ResumeOptimizationResult` | `resume_optimization.txt` | `resume_optimization_normalize.py` |
@@ -99,6 +103,7 @@ Golden fixtures under `tests/evals/fixtures/` decouple **prompt/schema iteration
 |-------|----------|------------|
 | Resume extraction | `backend_engineer`, `qwen_shape` | `eval_assertions.py` |
 | Job extraction | `greenhouse_backend` | `job_eval_assertions.py` |
+| Job capture classification | `job_detail`, `job_list`, `other_page` | inline in `test_job_capture_classification_eval.py` |
 | Match analysis | `senior_python_backend` | `match_eval_assertions.py` |
 | RAG retrieval | `senior_python_backend` | `rag_eval_assertions.py` |
 | Resume optimization | `senior_python_backend` | `resume_optimization_eval_assertions.py` |

@@ -1,5 +1,6 @@
 from app.schemas.api.models import (
     JobByUrlRead,
+    JobCaptureClassifyRequest,
     JobCreate,
     JobCreateRead,
     JobIntakeHandoffCreate,
@@ -18,6 +19,7 @@ from app.schemas.api.models import (
 )
 from app.schemas.company_research import CompanyBrief as CompanyBrief
 from app.schemas.cover_letter import CoverLetterResult as CoverLetterResult
+from app.schemas.job_capture import JobCaptureClassification as JobCaptureClassification
 from app.schemas.resume_optimization import (
     ApplyResumeSuggestionsRequest as ApplyResumeSuggestionsRequest,
 )
@@ -30,6 +32,8 @@ __all__ = [
     "CompanyBrief",
     "CoverLetterResult",
     "JobByUrlRead",
+    "JobCaptureClassifyRequest",
+    "JobCaptureClassification",
     "JobCreate",
     "JobCreateRead",
     "JobIntakeHandoffCreate",

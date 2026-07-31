@@ -1,6 +1,7 @@
 """HTTP request/response schemas."""
 
 from app.schemas.api.models import (
+    JobCaptureClassifyRequest,
     JobCreate,
     JobCreateRead,
     JobParseRead,
@@ -17,6 +18,7 @@ from app.schemas.api.models import (
 )
 
 __all__ = [
+    "JobCaptureClassifyRequest",
     "JobCreate",
     "JobCreateRead",
     "JobParseRead",

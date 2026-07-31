@@ -182,11 +182,11 @@ async function runCapturePipeline(tabId) {
     throw error;
   }
 
-  if (!capture.text || capture.text.length < 100) {
+  if (!capture.text || capture.text.length < 50) {
     await runOverlayAction(tabId, "hide", "error");
     await delay(480);
     throw new Error(
-      "Not enough job text on this page (need at least 100 characters). Open a page where the full job description is visible, then try again.",
+      "This page has too little visible text to capture. Open a job posting with the full description visible, then try again.",
     );
   }
 
@@ -213,6 +213,15 @@ async function runCapturePipeline(tabId) {
     }
 
     if (!result) {
+      const classification = await classifyJobCapture(settings.apiBaseUrl, {
+        text: capture.text,
+        page_title: capture.pageTitle,
+        page_url: capture.url,
+      });
+      if (!classification.is_capturable) {
+        throw new Error(classification.user_message);
+      }
+
       const parsed = await parseJobText(settings.apiBaseUrl, capture.text);
       const handoff = await createIntakeHandoff(settings.apiBaseUrl, {
         job_text: parsed.job_text,

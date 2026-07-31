@@ -1,0 +1,5 @@
+{
+  "expect_page_type": "job_list",
+  "expect_capturable": false,
+  "user_message_contains": "search"
+}
