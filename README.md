@@ -7,6 +7,12 @@
 
 Capture jobs from your browser with the **Chrome extension** (source-agnostic DOM read — no per-site integrations; LLM classifies and extracts on our backend), or paste descriptions in the web app. Upload or paste your resume, extract structured profile data with an LLM you control, review everything, and get **automatic explainable match analysis** — then research the company, tune your resume, and draft a cover letter.
 
+<p align="center">
+  <img src="docs/assets/demo/demo.gif" alt="AI Career OS Chrome extension demo — AI provider setup, ranked job pipeline, and job detail tabs" width="360" />
+</p>
+
+<p align="center"><em>Chrome side panel: pick your LLM → ranked pipeline → job detail (Match / Research tabs)</em></p>
+
 ---
 
 ## Table of contents
@@ -16,6 +22,7 @@ Capture jobs from your browser with the **Chrome extension** (source-agnostic DO
 - [How it works](#how-it-works)
 - [Tech stack](#tech-stack)
 - [Quick start](#quick-start)
+- [Install checklist](#install-checklist-backend--extension)
 - [Chrome extension](#chrome-extension)
 - [Configuration](#configuration)
 - [Local LLM setup (LM Studio)](#local-llm-setup-lm-studio)
@@ -118,82 +125,120 @@ flowchart LR
 
 ## Quick start
 
-### Prerequisites
+**Goal:** backend API running in Docker + Chrome extension loaded in ~5 minutes.
 
-- Python 3.12+
-- [uv](https://docs.astral.sh/uv/getting-started/installation/)
-- Docker (for PostgreSQL)
-- Node.js 20+ and [Bun](https://bun.sh) (frontend)
-- An LLM provider — cloud API key **or** local LM Studio / Ollama
+| Step | Command / action | You should see |
+|------|------------------|----------------|
+| 1 | `git clone … && cp .env.example .env` | Project on disk |
+| 2 | `docker compose up --build` | `Uvicorn running on http://0.0.0.0:8000` |
+| 3 | Open http://127.0.0.1:8000/docs | Swagger UI |
+| 4 | `cd frontend && bun install && bun run build:extension` | `extension/app/` populated |
+| 5 | Load [`extension/`](extension/) in Chrome (see below) | Side panel opens |
+| 6 | Extension **Settings** → API `http://127.0.0.1:8000` | Settings save |
+| 7 | Pick AI provider + add resume | Pipeline home |
 
-### 1. Clone and configure
+---
+
+## Install checklist (backend + extension)
+
+### A. Backend (Docker — recommended)
+
+**Requires:** [Docker Desktop](https://docs.docker.com/get-docker/) (or Docker Engine + Compose v2)
 
 ```bash
 git clone https://github.com/semirturgay/ai-career-os.git
 cd ai-career-os
 cp .env.example .env
+docker compose up --build
 ```
 
-### 2. Start PostgreSQL
+Leave this terminal open (or add `-d` to run in the background).
+
+| Service | URL | Notes |
+|---------|-----|--------|
+| API | http://127.0.0.1:8000 | Migrations run automatically on startup |
+| API docs | http://127.0.0.1:8000/docs | Interactive OpenAPI |
+| PostgreSQL | `127.0.0.1:5432` | User/db/password: `career` / `ai_career_os` / `career` |
+
+**Useful commands**
+
+```bash
+docker compose up --build -d    # run in background
+docker compose logs -f api      # tail API logs
+docker compose down             # stop
+docker compose down -v          # stop + wipe database
+```
+
+**Local LLM (LM Studio / Ollama) with Docker:** keep `http://127.0.0.1:1234/v1` in Settings — the API rewrites it to `host.docker.internal` automatically so it can reach your machine.
+
+<details>
+<summary>Alternative: run API on the host (Python dev)</summary>
 
 ```bash
 docker compose up db -d
-```
-
-### 3. Backend
-
-```bash
 uv sync
 uv run alembic upgrade head
 uv run uvicorn app.main:app --reload
 ```
 
-API: http://127.0.0.1:8000  
-OpenAPI docs: http://127.0.0.1:8000/docs
+Use `http://127.0.0.1:1234/v1` for LM Studio when the API runs on the host (no rewrite needed).
 
-### 4. Frontend (optional — web app dev)
+</details>
 
-For standalone browser dev or UI work. **The Chrome extension bundles its own UI** — you do not need this for normal extension use.
+---
+
+### B. Chrome extension
+
+**Requires:** [Google Chrome](https://www.google.com/chrome/) + [Bun](https://bun.sh)
 
 ```bash
 cd frontend
 bun install
-bun run dev          # standalone web app at http://127.0.0.1:5173
-bun run build:extension   # bundle React into extension/app/
+bun run build:extension
 ```
 
-`bun run dev` fetches `http://127.0.0.1:8000/openapi.json` and writes gitignored `src/types/api.generated.ts`.
+Then in Chrome:
 
-### 5. Chrome extension
+1. Open **`chrome://extensions`**
+2. Enable **Developer mode** (top-right)
+3. Click **Load unpacked**
+4. Select the **`extension/`** folder from this repo (not `extension/app/`)
 
-1. Backend running (step 3).
-2. `cd frontend && bun run build:extension`
-3. Chrome → `chrome://extensions` → **Load unpacked** → [`extension/`](extension/)
-4. Settings → API `http://127.0.0.1:8000`
+<p align="center">
+  <img src="docs/assets/demo/chrome-load-extension.png" alt="Load unpacked extension folder in Chrome" width="720" />
+</p>
 
-Re-run `build:extension` after frontend changes, then reload the extension.
+5. Pin the extension → open the **side panel**
+6. Go to **Settings** (gear) → set API URL to **`http://127.0.0.1:8000`**
+7. After frontend changes: re-run `bun run build:extension`, then click **Reload** on `chrome://extensions`
 
-### 6. First run
+> **macOS:** Always use `127.0.0.1`, not `localhost`, for the API URL — avoids IPv6 hangs.
 
-1. Open extension side panel → choose **Local** (LM Studio) or a cloud provider
-2. Upload or paste a resume in the side panel
-3. Wait for extraction (local models can take 30–60s)
-4. Review structured fields → save profile
-5. On a job page → **Capture & review in panel** → confirm → **Save & analyze match**
-6. View ranked pipeline; open job detail for match, research, resume, cover letter
+---
 
-> **Note:** Use `127.0.0.1` instead of `localhost` for API URLs on macOS — the Vite proxy and DB URL are configured this way to avoid IPv6 hangs.
+### C. First run
 
-### Fresh database / reset migrations
+1. **Side panel** → onboarding → choose **Local** (LM Studio) or a cloud provider  
+2. **Upload or paste resume** → review fields → save profile  
+3. Open a **job posting** in a normal browser tab  
+4. Side panel → **Capture job from this tab** → review → **Save & analyze match**  
+5. **Pipeline** tab → open a job → match / research / resume / cover letter  
 
-PostgreSQL runs with **pgvector** (`pgvector/pgvector:pg16`) for resume embedding search.
-If you had an older dev database or plain `postgres:16` image:
+<p align="center">
+  <img src="docs/assets/demo/extension-welcome.png" alt="Extension welcome screen" width="320" />
+</p>
 
-```bash
-docker compose down -v
-docker compose up db -d
-uv run alembic upgrade head
-```
+---
+
+### Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| `Could not connect to http://127.0.0.1:1234/v1` (Docker) | Start LM Studio server; keep URL as `127.0.0.1:1234` (auto-rewritten). Ensure LM Studio is listening. |
+| API URL hangs / no response | Use `127.0.0.1`, not `localhost` |
+| Extension shows blank panel | Re-run `bun run build:extension`, reload extension |
+| `docker compose up` fails on port 5432 | Stop local Postgres or change the host port in `docker-compose.yml` |
+| CORS / network errors from panel | Confirm API URL is `http://127.0.0.1:8000` (no trailing path) |
 
 ---
 
@@ -205,11 +250,7 @@ Policy: [docs/intake-policy.md](docs/intake-policy.md) · Architecture: [docs/ex
 
 ### Install (development)
 
-1. Complete [Quick start](#quick-start) steps 1–3 (backend running).
-2. `cd frontend && bun run build:extension`
-3. Chrome → `chrome://extensions` → enable **Developer mode**.
-4. **Load unpacked** → select the [`extension/`](extension/) folder.
-5. Extension **Settings** → API `http://127.0.0.1:8000`.
+See [Install checklist (backend + extension)](#install-checklist-backend--extension) — sections **A** (Docker backend) and **B** (Chrome extension).
 
 ### Capture flow
 
@@ -265,11 +306,11 @@ We do **not** integrate with, fetch from, or maintain extractors for any third-p
 
 ## Configuration
 
-Environment variables (see [`.env.example`](.env.example)):
+Environment variables (see [`.env.example`](.env.example)). With Docker, copy `.env` before `docker compose up` — compose loads it into the API container.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DATABASE_URL` | `postgresql+asyncpg://career:career@127.0.0.1:5432/ai_career_os` | Async Postgres connection |
+| `DATABASE_URL` | `postgresql+asyncpg://career:career@127.0.0.1:5432/ai_career_os` | Async Postgres connection (overridden in Docker Compose to use the `db` service) |
 | `OPENAI_API_KEY` | — | Optional fallback if not set in Settings UI |
 | `ANTHROPIC_API_KEY` | — | Optional fallback |
 | Other `*_API_KEY` | — | Provider-specific env fallbacks |
@@ -285,10 +326,10 @@ Provider and model selection is persisted in the `app_settings` singleton table.
 1. Download a model (e.g. Qwen 3.5 9B)
 2. Start the **OpenAI-compatible server** in LM Studio (default port `1234`)
 3. In onboarding, select **Local** → **LM Studio** preset
-4. Base URL: `http://127.0.0.1:1234/v1`
+4. Base URL: keep **`http://127.0.0.1:1234/v1`** in Settings — when the API runs in Docker it is rewritten automatically to reach your host (`host.docker.internal`). Use that URL directly only if you run the API on the host with `uv run`.
 5. Pick your loaded model from the dropdown
 
-Ollama works the same way with the Ollama preset (`http://127.0.0.1:11434/v1`).
+Ollama: same preset with port `11434`. Docker rewrites local URLs automatically; on a host-native API use `http://127.0.0.1:11434/v1`.
 
 Local models may return JSON with non-standard field names — the backend normalizes common variants before validation.
 
@@ -296,9 +337,17 @@ Local models may return JSON with non-standard field names — the backend norma
 
 ## Development
 
+### Docker (default)
+
+```bash
+docker compose up --build        # API + Postgres, auto-migrations, hot reload on ./app
+docker compose logs -f api
+```
+
 ### Tests
 
 ```bash
+uv sync
 uv run pytest
 ```
 
@@ -339,13 +388,24 @@ uv run pre-commit run --all-files   # verify setup
 
 ```bash
 cd frontend && bun run build
+cd frontend && bun run build:extension   # Chrome extension bundle
 ```
 
-### Docker (API + DB)
+### Refresh README demo assets
+
+With the backend running and the extension UI built:
 
 ```bash
-docker compose up --build
+# Animated hero GIF (side-panel walkthrough)
+npm install playwright @ffmpeg-installer/ffmpeg
+npx playwright install chromium
+node scripts/capture_readme_demo_gif.mjs
+
+# Static screenshots (install checklist, API docs)
+node scripts/capture_readme_demo.mjs
 ```
+
+Writes `docs/assets/demo/demo.gif` and PNGs (requires `playwright`; GIF also needs `@ffmpeg-installer/ffmpeg`).
 
 ---
 

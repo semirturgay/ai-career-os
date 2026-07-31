@@ -1,9 +1,10 @@
 import { useAsyncTasks } from "../lib/asyncTasks";
-import { usePipelineSync } from "../hooks/PipelineSyncContext";
+import { useOptionalPipelineSync } from "../hooks/PipelineSyncContext";
 
 export function GlobalTaskIndicator() {
   const tasks = useAsyncTasks();
-  const { pendingMatchCount } = usePipelineSync();
+  const pipeline = useOptionalPipelineSync();
+  const pendingMatchCount = pipeline?.pendingMatchCount ?? 0;
 
   const running = tasks.filter((task) => task.status === "running");
   const failed = tasks.filter((task) => task.status === "failed");
@@ -43,6 +44,7 @@ export function GlobalTaskIndicator() {
 
 export function useBackgroundWorkCount(): number {
   const tasks = useAsyncTasks();
-  const { pendingMatchCount } = usePipelineSync();
+  const pipeline = useOptionalPipelineSync();
+  const pendingMatchCount = pipeline?.pendingMatchCount ?? 0;
   return pendingMatchCount + tasks.filter((task) => task.status === "running").length;
 }

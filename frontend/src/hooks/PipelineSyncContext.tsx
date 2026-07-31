@@ -92,3 +92,7 @@ export function usePipelineSync(): PipelineSyncContextValue {
   }
   return context;
 }
+
+export function useOptionalPipelineSync(): PipelineSyncContextValue | null {
+  return useContext(PipelineSyncContext);
+}

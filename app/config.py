@@ -7,7 +7,11 @@ class Settings(BaseSettings):
     app_name: str = "AI Career OS"
     debug: bool = False
     database_url: str = "postgresql+asyncpg://career:career@127.0.0.1:5432/ai_career_os"
-    cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    cors_origins: list[str] = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:8765",
+    ]
 
     # Match analysis: retrieve relevant resume chunks before LLM call
     match_rag_enabled: bool = True

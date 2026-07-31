@@ -15,18 +15,26 @@ fixtures, and code improvements are all welcome.
 
 ## Development setup
 
+**Recommended (Docker backend):**
+
 ```bash
 git clone https://github.com/semirturgay/ai-career-os.git
 cd ai-career-os
 cp .env.example .env
+docker compose up --build
+```
+
+**Local Python backend** (when changing API code without Docker rebuild):
+
+```bash
 docker compose up db -d
 uv sync
 uv run alembic upgrade head
 uv run pre-commit install
+uv run uvicorn app.main:app --reload
 ```
 
-Backend: `uv run uvicorn app.main:app --reload`  
-Frontend: `cd frontend && bun install && bun run dev` (requires backend running)
+Frontend: `cd frontend && bun install && bun run dev` (requires backend at http://127.0.0.1:8000)
 
 Use `127.0.0.1` instead of `localhost` for API and database URLs on macOS.
 

@@ -17,7 +17,7 @@ We do not integrate with third-party job sites. We only read text already render
 
 ## Build & load (development)
 
-1. Start the backend (see root [README](../README.md)).
+1. Start the backend: `docker compose up --build` from the repo root (see [README](../README.md)).
 2. Build the UI into the extension:
 
    ```bash
