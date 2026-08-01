@@ -8,6 +8,12 @@ import {
   scoreFromResult,
 } from "../lib/matches";
 import { getApplicationProgress, nextApplicationTab, progressSummary } from "../lib/applicationProgress";
+import {
+  applicationStatusLabel,
+  applicationStatusVariant,
+  shouldShowApplicationStatusBadge,
+} from "../lib/applicationStatus";
+import type { ApplicationOutcomeStatus } from "../types";
 import { useEmbeddedMode } from "../hooks/useEmbeddedMode";
 import { IS_EXTENSION } from "../lib/extensionRuntime";
 import { ExtensionEmptyPipeline } from "./ExtensionEmptyPipeline";
@@ -19,6 +25,7 @@ interface JobBoardProps {
   jobs: Job[];
   analyses: MatchAnalysis[];
   profileId: string;
+  getApplicationStatusForJob: (jobId: string) => ApplicationOutcomeStatus;
 }
 
 function scoreAccentClass(score: number | null): string {
@@ -43,11 +50,18 @@ function CompanyMark({ name }: { name: string }) {
 interface JobOpportunityCardProps {
   job: Job;
   analysis: MatchAnalysis | undefined;
+  applicationStatus: ApplicationOutcomeStatus;
   compact: boolean;
   rank: number;
 }
 
-function JobOpportunityCard({ job, analysis, compact, rank }: JobOpportunityCardProps) {
+function JobOpportunityCard({
+  job,
+  analysis,
+  applicationStatus,
+  compact,
+  rank,
+}: JobOpportunityCardProps) {
   const pending = analysis?.status === "pending";
   const failed = analysis?.status === "failed";
   const score = hasMatchResult(analysis) ? scoreFromResult(analysis?.result) : null;
@@ -113,6 +127,11 @@ function JobOpportunityCard({ job, analysis, compact, rank }: JobOpportunityCard
               ) : (
                 <Badge variant="default">Not analyzed</Badge>
               )}
+              {shouldShowApplicationStatusBadge(applicationStatus) && (
+                <Badge variant={applicationStatusVariant(applicationStatus)}>
+                  {applicationStatusLabel(applicationStatus)}
+                </Badge>
+              )}
               <span className="text-[11px] text-text-muted">{progressSummary(progress)}</span>
             </div>
 
@@ -134,7 +153,12 @@ function JobOpportunityCard({ job, analysis, compact, rank }: JobOpportunityCard
   );
 }
 
-export function JobBoard({ jobs, analyses, profileId }: JobBoardProps) {
+export function JobBoard({
+  jobs,
+  analyses,
+  profileId,
+  getApplicationStatusForJob,
+}: JobBoardProps) {
   const embedded = useEmbeddedMode();
 
   if (jobs.length === 0) {
@@ -173,6 +197,7 @@ export function JobBoard({ jobs, analyses, profileId }: JobBoardProps) {
           key={job.id}
           job={job}
           analysis={latestAnalysisForJob(analyses, profileId, job.id)}
+          applicationStatus={getApplicationStatusForJob(job.id)}
           compact={embedded}
           rank={index + 1}
         />

@@ -22,9 +22,14 @@ export function applicationStatusLabel(status: ApplicationOutcomeStatus): string
 
 export function latestApplicationOutcome(
   events: FeedbackEvent[],
+  jobId?: string,
 ): { status: ApplicationOutcomeStatus; note: string | null } {
   const latest = events
-    .filter((event) => event.event_type === "application_outcome")
+    .filter(
+      (event) =>
+        event.event_type === "application_outcome" &&
+        (!jobId || event.job_id === jobId),
+    )
     .sort(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
     )[0];
@@ -42,6 +47,19 @@ export function latestApplicationOutcome(
     status: status as ApplicationOutcomeStatus,
     note: typeof latest.payload.note === "string" ? latest.payload.note : null,
   };
+}
+
+export function applicationStatusForJob(
+  events: FeedbackEvent[],
+  jobId: string,
+): ApplicationOutcomeStatus {
+  return latestApplicationOutcome(events, jobId).status;
+}
+
+export function shouldShowApplicationStatusBadge(
+  status: ApplicationOutcomeStatus,
+): boolean {
+  return status !== "saved";
 }
 
 export function applicationStatusVariant(

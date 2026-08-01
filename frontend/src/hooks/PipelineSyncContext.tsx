@@ -1,19 +1,22 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
-import type { Job, MatchAnalysis } from "../types";
+import type { ApplicationOutcomeStatus, FeedbackEvent, Job, MatchAnalysis } from "../types";
 import { usePolling } from "./usePolling";
 import { getRunningAsyncTasks, onAsyncTaskSettled, subscribeAsyncTasks } from "../lib/asyncTasks";
+import { applicationStatusForJob } from "../lib/applicationStatus";
 import { latestAnalysisForJob, pendingAnalysesCount } from "../lib/matches";
 
 interface PipelineSyncContextValue {
   jobs: Job[];
   analyses: MatchAnalysis[];
+  feedbackEvents: FeedbackEvent[];
   pendingMatchCount: number;
   loading: boolean;
   refreshPipeline: () => Promise<void>;
   refreshJob: (jobId: string) => Promise<Job>;
   getAnalysesForJob: (jobId: string) => MatchAnalysis[];
   getLatestAnalysisForJob: (jobId: string) => MatchAnalysis | undefined;
+  getApplicationStatusForJob: (jobId: string) => ApplicationOutcomeStatus;
 }
 
 const PipelineSyncContext = createContext<PipelineSyncContextValue | null>(null);
@@ -26,16 +29,19 @@ interface PipelineSyncProviderProps {
 export function PipelineSyncProvider({ profileId, children }: PipelineSyncProviderProps) {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [analyses, setAnalyses] = useState<MatchAnalysis[]>([]);
+  const [feedbackEvents, setFeedbackEvents] = useState<FeedbackEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [runningTaskCount, setRunningTaskCount] = useState(0);
 
   const refreshPipeline = useCallback(async () => {
-    const [jobList, analysisList] = await Promise.all([
+    const [jobList, analysisList, feedbackList] = await Promise.all([
       api.jobs.list(),
       api.matchAnalyses.list(),
+      api.feedback.listForProfile(profileId),
     ]);
     setJobs(jobList);
     setAnalyses(analysisList.filter((entry) => entry.profile_id === profileId));
+    setFeedbackEvents(feedbackList.filter((entry) => entry.profile_id === profileId));
   }, [profileId]);
 
   const refreshJob = useCallback(async (jobId: string) => {
@@ -68,6 +74,7 @@ export function PipelineSyncProvider({ profileId, children }: PipelineSyncProvid
     () => ({
       jobs,
       analyses,
+      feedbackEvents,
       pendingMatchCount,
       loading,
       refreshPipeline,
@@ -76,8 +83,19 @@ export function PipelineSyncProvider({ profileId, children }: PipelineSyncProvid
         analyses.filter((entry) => entry.job_id === jobId),
       getLatestAnalysisForJob: (jobId: string) =>
         latestAnalysisForJob(analyses, profileId, jobId),
+      getApplicationStatusForJob: (jobId: string) =>
+        applicationStatusForJob(feedbackEvents, jobId),
     }),
-    [analyses, jobs, loading, pendingMatchCount, profileId, refreshJob, refreshPipeline],
+    [
+      analyses,
+      feedbackEvents,
+      jobs,
+      loading,
+      pendingMatchCount,
+      profileId,
+      refreshJob,
+      refreshPipeline,
+    ],
   );
 
   return (

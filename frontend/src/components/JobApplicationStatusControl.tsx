@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { ApplicationOutcomeStatus } from "../types";
 import { useJobFeedback } from "./MatchFeedbackControls";
+import { useOptionalPipelineSync } from "../hooks/PipelineSyncContext";
 import {
   APPLICATION_STATUS_OPTIONS,
   applicationStatusLabel,
@@ -19,8 +20,9 @@ export function JobApplicationStatusControl({
   profileId,
   jobId,
 }: JobApplicationStatusControlProps) {
+  const pipeline = useOptionalPipelineSync();
   const { events, loading, refresh } = useJobFeedback(jobId);
-  const current = latestApplicationOutcome(events);
+  const current = latestApplicationOutcome(events, jobId);
   const [status, setStatus] = useState<ApplicationOutcomeStatus>(current.status);
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -53,6 +55,7 @@ export function JobApplicationStatusControl({
         },
       });
       await refresh();
+      await pipeline?.refreshPipeline();
       setNote("");
       setSavedMessage(`Status updated to ${applicationStatusLabel(status).toLowerCase()}.`);
     } catch (err) {

@@ -10,7 +10,8 @@ import { scoreFromResult, latestAnalysisForJob } from "../lib/matches";
 export function HomePage() {
   const { profile } = useProfileRoute();
   const embedded = useEmbeddedMode();
-  const { jobs, analyses, pendingMatchCount, loading } = usePipelineSync();
+  const { jobs, analyses, pendingMatchCount, loading, getApplicationStatusForJob } =
+    usePipelineSync();
   const isEmptyPipeline = jobs.length === 0;
 
   if (loading) {
@@ -128,12 +129,22 @@ export function HomePage() {
               </p>
             </div>
 
-            <JobBoard jobs={jobs} analyses={analyses} profileId={profile.id} />
+            <JobBoard
+              jobs={jobs}
+              analyses={analyses}
+              profileId={profile.id}
+              getApplicationStatusForJob={getApplicationStatusForJob}
+            />
           </section>
         )}
 
         {isEmptyPipeline && (
-          <JobBoard jobs={jobs} analyses={analyses} profileId={profile.id} />
+          <JobBoard
+            jobs={jobs}
+            analyses={analyses}
+            profileId={profile.id}
+            getApplicationStatusForJob={getApplicationStatusForJob}
+          />
         )}
       </div>
     </Layout>
