@@ -145,6 +145,14 @@ export type FeedbackEventType =
   | "preference"
   | "application_outcome";
 
+export type ApplicationOutcomeStatus =
+  | "saved"
+  | "applied"
+  | "interviewing"
+  | "rejected"
+  | "offer"
+  | "passed";
+
 export interface FeedbackEvent {
   id: string;
   profile_id: string;

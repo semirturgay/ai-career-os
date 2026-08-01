@@ -16,6 +16,7 @@ import {
 } from "../lib/jobExtraction";
 import { Badge, Button, ErrorBanner } from "../components/ui";
 import { DuplicateJobBanner } from "../components/DuplicateJobBanner";
+import { JobApplicationStatusControl } from "../components/JobApplicationStatusControl";
 import { useEmbeddedMode } from "../hooks/useEmbeddedMode";
 import type { DuplicateJobInfo } from "../lib/jobUrl";
 
@@ -333,6 +334,8 @@ export function JobDetailPage() {
         )}
 
         {error && <ErrorBanner message={error} />}
+
+        <JobApplicationStatusControl profileId={profile.id} jobId={job.id} />
 
         {reExtracting && <AiLoadingState variant="job-extract" size="sm" />}
 
