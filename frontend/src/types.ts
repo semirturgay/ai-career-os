@@ -56,6 +56,7 @@ export interface Job {
   source: string | null;
   raw_metadata: Record<string, unknown> | null;
   company_brief?: CompanyBrief | null;
+  application_status?: ApplicationOutcomeStatus;
   created_at: string;
   updated_at: string;
 }

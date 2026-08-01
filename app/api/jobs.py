@@ -22,6 +22,7 @@ from app.schemas import (
     JobRead,
     JobUpdate,
 )
+from app.schemas.feedback import ApplicationOutcomeStatus
 from app.schemas.job_capture import JobCaptureClassification
 from app.services.company_research import company_brief_to_storage, research_company
 from app.services.job_capture_classifier import classify_job_capture
@@ -105,8 +106,15 @@ async def create_job(
 
 
 @router.get("/jobs", response_model=list[JobRead])
-async def list_jobs(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Job).order_by(Job.created_at.desc()))
+async def list_jobs(
+    application_status: list[ApplicationOutcomeStatus] | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+):
+    query = select(Job).order_by(Job.created_at.desc())
+    if application_status:
+        statuses = [status.value for status in application_status]
+        query = query.where(Job.application_status.in_(statuses))
+    result = await db.execute(query)
     return result.scalars().all()
 
 

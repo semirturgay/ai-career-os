@@ -1,4 +1,4 @@
-import type { ApplicationOutcomeStatus, FeedbackEvent } from "../types";
+import type { ApplicationOutcomeStatus, FeedbackEvent, Job } from "../types";
 
 export const APPLICATION_STATUS_OPTIONS: {
   value: ApplicationOutcomeStatus;
@@ -54,6 +54,41 @@ export function applicationStatusForJob(
   jobId: string,
 ): ApplicationOutcomeStatus {
   return latestApplicationOutcome(events, jobId).status;
+}
+
+export function resolveApplicationStatus(
+  job: Pick<Job, "application_status">,
+  events: FeedbackEvent[],
+  jobId: string,
+): ApplicationOutcomeStatus {
+  if (job.application_status) {
+    return job.application_status;
+  }
+  return applicationStatusForJob(events, jobId);
+}
+
+export type PipelineStatusFilter = "all" | "applied" | "interviewing" | "rejected";
+
+export const PIPELINE_STATUS_FILTERS: {
+  value: PipelineStatusFilter;
+  label: string;
+}[] = [
+  { value: "all", label: "All" },
+  { value: "applied", label: "Applied" },
+  { value: "interviewing", label: "Interviewing" },
+  { value: "rejected", label: "Rejected" },
+];
+
+export function filterJobsByPipelineStatus(
+  jobs: Job[],
+  filter: PipelineStatusFilter,
+  events: FeedbackEvent[],
+): Job[] {
+  if (filter === "all") {
+    return jobs;
+  }
+
+  return jobs.filter((job) => resolveApplicationStatus(job, events, job.id) === filter);
 }
 
 export function shouldShowApplicationStatusBadge(

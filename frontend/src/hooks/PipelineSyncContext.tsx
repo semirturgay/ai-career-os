@@ -3,7 +3,7 @@ import { api } from "../api/client";
 import type { ApplicationOutcomeStatus, FeedbackEvent, Job, MatchAnalysis } from "../types";
 import { usePolling } from "./usePolling";
 import { getRunningAsyncTasks, onAsyncTaskSettled, subscribeAsyncTasks } from "../lib/asyncTasks";
-import { applicationStatusForJob } from "../lib/applicationStatus";
+import { applicationStatusForJob, resolveApplicationStatus } from "../lib/applicationStatus";
 import { latestAnalysisForJob, pendingAnalysesCount } from "../lib/matches";
 
 interface PipelineSyncContextValue {
@@ -83,8 +83,13 @@ export function PipelineSyncProvider({ profileId, children }: PipelineSyncProvid
         analyses.filter((entry) => entry.job_id === jobId),
       getLatestAnalysisForJob: (jobId: string) =>
         latestAnalysisForJob(analyses, profileId, jobId),
-      getApplicationStatusForJob: (jobId: string) =>
-        applicationStatusForJob(feedbackEvents, jobId),
+      getApplicationStatusForJob: (jobId: string) => {
+        const job = jobs.find((entry) => entry.id === jobId);
+        if (job) {
+          return resolveApplicationStatus(job, feedbackEvents, jobId);
+        }
+        return applicationStatusForJob(feedbackEvents, jobId);
+      },
     }),
     [
       analyses,

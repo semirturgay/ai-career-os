@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.schemas.company_research import CompanyBrief
 from app.schemas.enums import MatchAnalysisStatus
+from app.schemas.feedback import ApplicationOutcomeStatus
 from app.schemas.job_extraction import JobExtraction
 from app.schemas.resume_extraction import ResumeExtraction
 
@@ -77,8 +78,9 @@ class JobRead(BaseModel):
     location: str | None
     url: str | None
     source: str | None
-    raw_metadata: dict | None
+    raw_metadata: dict | None = None
     company_brief: CompanyBrief | None = None
+    application_status: ApplicationOutcomeStatus | str = ApplicationOutcomeStatus.SAVED
     created_at: datetime
     updated_at: datetime
 

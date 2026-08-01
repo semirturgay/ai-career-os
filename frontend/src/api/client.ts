@@ -1,4 +1,4 @@
-import type { CompanyBrief, CoverLetterResult, FeedbackEvent, FeedbackEventCreate, Job, JobCreate, JobCreateResponse, JobIntakeHandoff, JobParseResult, MatchAnalysis, Profile, ProfileCreate, ResumeOptimizationResult, ResumeParseResult, ResumeSuggestion } from "../types";
+import type { ApplicationOutcomeStatus, CompanyBrief, CoverLetterResult, FeedbackEvent, FeedbackEventCreate, Job, JobCreate, JobCreateResponse, JobIntakeHandoff, JobParseResult, MatchAnalysis, Profile, ProfileCreate, ResumeOptimizationResult, ResumeParseResult, ResumeSuggestion } from "../types";
 import type { AppSettings, ListModelsRequest, ModelListResponse, SettingsUpdate } from "../types/settings";
 import { getApiBase } from "../lib/extensionRuntime";
 import {
@@ -136,7 +136,14 @@ export const api = {
   },
 
   jobs: {
-    list: () => request<Job[]>("/jobs"),
+    list: (params?: { applicationStatus?: ApplicationOutcomeStatus[] }) => {
+      const search = new URLSearchParams();
+      params?.applicationStatus?.forEach((status) => {
+        search.append("application_status", status);
+      });
+      const query = search.toString();
+      return request<Job[]>(`/jobs${query ? `?${query}` : ""}`);
+    },
     get: (id: string) => request<Job>(`/jobs/${id}`),
     create: (data: JobCreate) =>
       request<JobCreateResponse>("/jobs", { method: "POST", body: JSON.stringify(data) }),

@@ -54,6 +54,7 @@ class Job(Base):
     source: Mapped[str | None] = mapped_column(String(100))
     raw_metadata: Mapped[dict | None] = mapped_column(JSONB, default=None)
     company_brief: Mapped[dict | None] = mapped_column(JSONB, default=None)
+    application_status: Mapped[str] = mapped_column(String(50), default="saved", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

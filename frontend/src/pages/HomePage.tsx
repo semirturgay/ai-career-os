@@ -1,18 +1,49 @@
 import { Link } from "react-router-dom";
+import { useMemo, useState } from "react";
 import { JobBoard } from "../components/JobBoard";
 import { Layout } from "../components/Layout";
 import { PageLoader } from "../components/AiLoadingState";
+import { PipelineStatusFilters } from "../components/PipelineStatusFilters";
 import { useProfileRoute } from "../components/RequireProfileLayout";
 import { useEmbeddedMode } from "../hooks/useEmbeddedMode";
 import { usePipelineSync } from "../hooks/PipelineSyncContext";
+import {
+  filterJobsByPipelineStatus,
+  type PipelineStatusFilter,
+  resolveApplicationStatus,
+} from "../lib/applicationStatus";
 import { scoreFromResult, latestAnalysisForJob } from "../lib/matches";
 
 export function HomePage() {
   const { profile } = useProfileRoute();
   const embedded = useEmbeddedMode();
-  const { jobs, analyses, pendingMatchCount, loading, getApplicationStatusForJob } =
+  const { jobs, analyses, feedbackEvents, pendingMatchCount, loading, getApplicationStatusForJob } =
     usePipelineSync();
+  const [statusFilter, setStatusFilter] = useState<PipelineStatusFilter>("all");
   const isEmptyPipeline = jobs.length === 0;
+
+  const statusCounts = useMemo(() => {
+    const counts: Record<PipelineStatusFilter, number> = {
+      all: jobs.length,
+      applied: 0,
+      interviewing: 0,
+      rejected: 0,
+    };
+
+    for (const job of jobs) {
+      const status = resolveApplicationStatus(job, feedbackEvents, job.id);
+      if (status === "applied") counts.applied += 1;
+      if (status === "interviewing") counts.interviewing += 1;
+      if (status === "rejected") counts.rejected += 1;
+    }
+
+    return counts;
+  }, [feedbackEvents, jobs]);
+
+  const filteredJobs = useMemo(
+    () => filterJobsByPipelineStatus(jobs, statusFilter, feedbackEvents),
+    [feedbackEvents, jobs, statusFilter],
+  );
 
   if (loading) {
     return (
@@ -125,16 +156,43 @@ export function HomePage() {
               <p className="text-xs text-text-muted sm:text-sm">
                 {pendingMatchCount > 0
                   ? `Analyzing ${pendingMatchCount} job${pendingMatchCount === 1 ? "" : "s"}…`
-                  : "Ranked by match score"}
+                  : statusFilter === "all"
+                    ? "Ranked by match score"
+                    : `Showing ${filteredJobs.length} ${statusFilter} job${filteredJobs.length === 1 ? "" : "s"}`}
               </p>
             </div>
 
-            <JobBoard
-              jobs={jobs}
-              analyses={analyses}
-              profileId={profile.id}
-              getApplicationStatusForJob={getApplicationStatusForJob}
+            <PipelineStatusFilters
+              value={statusFilter}
+              counts={statusCounts}
+              onChange={setStatusFilter}
+              compact={embedded}
             />
+
+            {filteredJobs.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border bg-surface-raised px-5 py-8 text-center">
+                <p className="text-sm font-medium text-text">No jobs in this view</p>
+                <p className="mt-1 text-sm text-text-muted">
+                  Try another filter or update application status on a job detail page.
+                </p>
+                {statusFilter !== "all" && (
+                  <button
+                    type="button"
+                    className="mt-4 text-sm font-medium text-accent hover:underline"
+                    onClick={() => setStatusFilter("all")}
+                  >
+                    Show all jobs
+                  </button>
+                )}
+              </div>
+            ) : (
+              <JobBoard
+                jobs={filteredJobs}
+                analyses={analyses}
+                profileId={profile.id}
+                getApplicationStatusForJob={getApplicationStatusForJob}
+              />
+            )}
           </section>
         )}
 
