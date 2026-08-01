@@ -3,7 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
+from uuid import uuid4
 
 import pytest
 
@@ -121,6 +122,52 @@ async def test_build_match_user_message_falls_back_to_resume_text():
 
     message = await build_match_user_message(None, profile, job)
     assert "Plain resume text" in message
+
+
+@pytest.mark.asyncio
+async def test_analyze_match_injects_career_memory_fixture():
+    case_dir = FIXTURES_DIR / "with_career_memory"
+    profile_data = load_json(case_dir / "profile.json")
+    job_data = load_json(case_dir / "job.json")
+    llm_response = load_json(case_dir / "llm_response.json")
+    memory_rows = load_json(case_dir / "career_memories.json")
+
+    profile_id = uuid4()
+    profile = SimpleNamespace(
+        id=profile_id,
+        structured_data=profile_data,
+        resume_text="Jane Doe\nSenior Backend Engineer",
+    )
+    job = SimpleNamespace(
+        title=job_data["title"],
+        company=job_data["company"],
+        description=job_data["description"],
+        location=job_data.get("location"),
+        raw_metadata=job_data.get("raw_metadata", {}),
+    )
+    memories = [SimpleNamespace(content=row["content"]) for row in memory_rows]
+
+    golden = MatchResult.model_validate(normalize_match_payload(llm_response))
+    mock_client = AsyncMock()
+    mock_client.generate_structured.return_value = golden
+
+    mock_db = AsyncMock()
+    result_mock = Mock()
+    result_mock.scalars.return_value.all.return_value = memories
+    mock_db.execute = AsyncMock(return_value=result_mock)
+
+    with (
+        patch(
+            "app.services.match.analyzer.get_llm_client",
+            new=AsyncMock(return_value=mock_client),
+        ),
+        patch("app.services.match.analyzer.retrieve_for_match", new=AsyncMock(return_value=[])),
+    ):
+        await analyze_match(db=mock_db, profile=profile, job=job)
+
+    system_message = mock_client.generate_structured.await_args.kwargs["messages"][0].content
+    assert "Career memory (user corrections and preferences)" in system_message
+    assert "AWS ECS at Globex Inc" in system_message
 
 
 @pytest.mark.live_llm

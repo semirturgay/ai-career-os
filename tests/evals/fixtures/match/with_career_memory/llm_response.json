@@ -1,0 +1,31 @@
+{
+  "score": 88.5,
+  "recommendation": "apply",
+  "strengths": [
+    {
+      "point": 9.5,
+      "evidence": "8 years of backend engineering experience with Python, FastAPI, and PostgreSQL across Acme Corp and Globex Inc."
+    },
+    {
+      "point": 9.2,
+      "evidence": "Designed REST and GraphQL APIs and led a migration to FastAPI microservices at Acme Corp."
+    },
+    {
+      "point": 8.8,
+      "evidence": "Demonstrated CI/CD experience through GitHub Actions pipelines at Globex Inc."
+    }
+  ],
+  "gaps": [
+    {
+      "point": 4.5,
+      "severity": "medium",
+      "evidence": "AWS experience is listed as nice-to-have in the job description but is not explicitly mentioned in the resume."
+    },
+    {
+      "point": 3.0,
+      "severity": "low",
+      "evidence": "Kubernetes production experience is not explicitly listed in the resume."
+    }
+  ],
+  "summary": "Jane Doe is a strong match for this Senior Backend Engineer role. Her Python, FastAPI, PostgreSQL, and API design experience align closely with the core requirements. The main gaps are optional cloud infrastructure technologies that are not explicitly mentioned. Overall, she should apply."
+}

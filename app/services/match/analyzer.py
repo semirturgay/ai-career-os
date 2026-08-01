@@ -5,12 +5,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.logging_config import get_logger
 from app.models import Job, Profile
-from app.prompts import load_prompt
 from app.schemas.match_analysis import MatchResult
 from app.schemas.rag import ScoredChunk
 from app.services.llm import Message, get_llm_client
 from app.services.match.formatters import build_match_user_message
+from app.services.match.prompts import build_match_system_prompt_from_memories
 from app.services.match_analysis_normalize import normalize_match_payload
+from app.services.memory.context import load_active_memories
 from app.services.rag.job_queries import job_retrieval_queries
 from app.services.rag.match_context import retrieve_for_match
 from app.services.rag.retrieval import get_embedding_provider
@@ -50,10 +51,22 @@ async def analyze_match(
         scored=rag_chunks,
     )
 
+    if db is not None:
+        memories = await load_active_memories(db, profile.id)
+    else:
+        memories = []
+    system_prompt = build_match_system_prompt_from_memories(memories)
+    if memories:
+        logger.info(
+            "Match career memory: profile=%s snippets=%d",
+            profile.id,
+            len(memories),
+        )
+
     client = await get_llm_client(db)
     result = await client.generate_structured(
         messages=[
-            Message(role="system", content=load_prompt("match_analysis")),
+            Message(role="system", content=system_prompt),
             Message(role="user", content=user_message),
         ],
         response_model=MatchResult,

@@ -7,6 +7,7 @@ from app.db.session import get_db
 from app.logging_config import get_logger
 from app.models import FeedbackEvent, Job, MatchAnalysis, Profile
 from app.schemas.feedback import FeedbackEventCreate, FeedbackEventRead
+from app.services.memory.context import sync_career_memory_from_feedback
 
 logger = get_logger(__name__)
 
@@ -57,6 +58,8 @@ async def create_feedback(
         payload=body.payload,
     )
     db.add(event)
+    await db.flush()
+    await sync_career_memory_from_feedback(db, event)
     await db.commit()
     await db.refresh(event)
     logger.info(

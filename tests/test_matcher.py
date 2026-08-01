@@ -1,5 +1,5 @@
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 
 import pytest
@@ -22,7 +22,7 @@ async def test_analyze_match_calls_llm_client():
     mock_client = AsyncMock()
     mock_client.generate_structured.return_value = result
 
-    profile = SimpleNamespace(structured_data={"name": "Jane"}, resume_text="Jane")
+    profile = SimpleNamespace(id=uuid4(), structured_data={"name": "Jane"}, resume_text="Jane")
     job = SimpleNamespace(
         title="Backend Engineer",
         company="Acme",
@@ -40,6 +40,52 @@ async def test_analyze_match_calls_llm_client():
     assert output.score == 85.0
     assert isinstance(rag_chunks, list)
     mock_client.generate_structured.assert_awaited_once()
+    system_message = mock_client.generate_structured.await_args.kwargs["messages"][0].content
+    assert "Career memory" not in system_message
+
+
+@pytest.mark.asyncio
+async def test_analyze_match_injects_career_memory_in_system_prompt():
+    result = MatchResult(
+        score=85.0,
+        recommendation="apply",
+        strengths=[MatchStrength(point=9.0, evidence="Strong Python experience.")],
+        gaps=[],
+        summary="Strong match.",
+    )
+    mock_client = AsyncMock()
+    mock_client.generate_structured.return_value = result
+
+    profile_id = uuid4()
+    profile = SimpleNamespace(id=profile_id, structured_data={"name": "Jane"}, resume_text="Jane")
+    job = SimpleNamespace(
+        title="Backend Engineer",
+        company="Acme",
+        description="Python required",
+        location=None,
+        raw_metadata={},
+    )
+    memory = SimpleNamespace(
+        content='User disputes this gap: "Missing AWS". Their note: Globex project',
+    )
+
+    mock_db = AsyncMock()
+    result_mock = Mock()
+    result_mock.scalars.return_value.all.return_value = [memory]
+    mock_db.execute = AsyncMock(return_value=result_mock)
+
+    with (
+        patch(
+            "app.services.match.analyzer.get_llm_client",
+            new=AsyncMock(return_value=mock_client),
+        ),
+        patch("app.services.match.analyzer.retrieve_for_match", new=AsyncMock(return_value=[])),
+    ):
+        await analyze_match(db=mock_db, profile=profile, job=job)
+
+    system_message = mock_client.generate_structured.await_args.kwargs["messages"][0].content
+    assert "Career memory (user corrections and preferences)" in system_message
+    assert "Globex project" in system_message
 
 
 @pytest.mark.asyncio

@@ -20,6 +20,17 @@ Never assume the candidate knows a technology unless it is explicitly mentioned 
 
 ------------------------------------------------------------
 
+Career memory (user corrections and preferences)
+
+These notes come from the candidate's prior feedback on past match analyses.
+Treat them as hints — resume evidence still takes precedence.
+Do not invent skills based on memory alone. If memory conflicts with the resume,
+trust the resume excerpts.
+
+{career_memory}
+
+------------------------------------------------------------
+
 Required JSON shape
 
 {

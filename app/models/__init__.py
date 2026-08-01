@@ -30,6 +30,10 @@ class Profile(Base):
         back_populates="profile",
         cascade="all, delete-orphan",
     )
+    career_memories: Mapped[list["CareerMemory"]] = relationship(
+        back_populates="profile",
+        cascade="all, delete-orphan",
+    )
     chunk_embeddings: Mapped[list["ResumeChunkEmbedding"]] = relationship(
         back_populates="profile",
         cascade="all, delete-orphan",
@@ -80,6 +84,26 @@ class FeedbackEvent(Base):
     match_analysis: Mapped["MatchAnalysis | None"] = relationship()
 
 
+class CareerMemory(Base):
+    """Profile-level memory snippets synthesized from user feedback."""
+
+    __tablename__ = "career_memories"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    profile_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("profiles.id"), index=True)
+    category: Mapped[str] = mapped_column(String(50))
+    content: Mapped[str] = mapped_column(Text)
+    memory_key: Mapped[str | None] = mapped_column(String(255), index=True)
+    source_feedback_ids: Mapped[list] = mapped_column(JSONB)
+    active: Mapped[bool] = mapped_column(default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    profile: Mapped["Profile"] = relationship(back_populates="career_memories")
+
+
 class MatchAnalysis(Base):
     """Result of comparing a profile against a job.
 
@@ -124,6 +148,7 @@ from app.models.rag_embeddings import ResumeChunkEmbedding  # noqa: E402
 __all__ = [
     "AppSettings",
     "Base",
+    "CareerMemory",
     "FeedbackEvent",
     "Job",
     "MatchAnalysis",
