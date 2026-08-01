@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.exception_handlers import register_exception_handlers
+from app.api.feedback import router as feedback_router
 from app.api.jobs import router as jobs_router
 from app.api.llm import router as llm_router
 from app.api.match_analyses import router as match_analyses_router
@@ -47,6 +48,7 @@ app.add_middleware(
 app.include_router(profiles_router, prefix="/api/v1")
 app.include_router(jobs_router, prefix="/api/v1")
 app.include_router(match_analyses_router, prefix="/api/v1")
+app.include_router(feedback_router, prefix="/api/v1")
 app.include_router(settings_router, prefix="/api/v1")
 app.include_router(llm_router, prefix="/api/v1")
 

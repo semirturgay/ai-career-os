@@ -139,9 +139,9 @@ Add `tests/evals/fixtures/match/with_career_memory/` when Phase 2 lands.
 
 | Step | Deliverable | You review |
 |------|-------------|------------|
-| **1** | This milestone doc + roadmap updates | Scope & phases |
-| **2** | Alembic migration + `FeedbackEvent` model + schemas | Data model |
-| **3** | `POST/GET /feedback` routes + tests | API |
+| **1** | This milestone doc + roadmap updates | Done |
+| **2** | Alembic migration + `FeedbackEvent` model + schemas | Done |
+| **3** | `POST/GET /feedback` routes + tests | Done |
 | **4** | Match panel feedback UI (helpful + gap dispute) | UX |
 | **5** | Job application status UI + `application_outcome` events | UX |
 | **6** | `CareerMemory` model + synthesizer + match prompt injection | AI behavior |

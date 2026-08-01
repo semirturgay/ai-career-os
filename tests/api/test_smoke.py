@@ -48,6 +48,20 @@ async def test_list_match_analyses(api_client: httpx.AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_list_feedback_requires_profile(api_client: httpx.AsyncClient):
+    response = await api_client.get("/api/v1/feedback")
+
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_list_feedback_empty(api_client: httpx.AsyncClient):
+    response = await api_client.get(f"/api/v1/feedback?profile_id={uuid4()}")
+
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
 async def test_get_match_analysis_not_found(api_client: httpx.AsyncClient):
     response = await api_client.get(f"/api/v1/match-analyses/{uuid4()}")
 
