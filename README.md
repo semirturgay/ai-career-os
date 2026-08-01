@@ -5,13 +5,15 @@
 
 **An open-source AI operating system for career management** — starting with explainable job matching, not black-box auto-apply bots.
 
-Capture jobs from your browser with the **Chrome extension** (source-agnostic DOM read — no per-site integrations; LLM classifies and extracts on our backend), or paste descriptions in the web app. Upload or paste your resume, extract structured profile data with an LLM you control, review everything, and get **automatic explainable match analysis** — then research the company, tune your resume, and draft a cover letter.
+Capture jobs from your browser with the **Chrome extension** (source-agnostic DOM read — no per-site integrations; LLM classifies and extracts on our backend), or paste descriptions in the web app. Upload or paste your resume, extract structured profile data with an LLM you control — including **local models via LM Studio** — review everything, and get **automatic explainable match analysis** — then research the company, tune your resume, and draft a cover letter.
 
 <p align="center">
   <img src="docs/assets/demo/demo.gif" alt="AI Career OS demo — Chrome browser with job posting, side panel, resume extract, and capture animations" width="720" />
 </p>
 
 <p align="center"><em>Chrome window: profile setup → capture → explainable match score with evidence-backed strengths & gaps</em></p>
+
+<p align="center"><em>Demo recorded with <strong>LM Studio</strong> + <strong>Qwen3.5 9B</strong> running locally — the full flow above, no cloud API.</em></p>
 
 ---
 
@@ -57,7 +59,7 @@ Long-term vision: an autonomous career assistant that discovers jobs, explains f
 
 - **PDF resume ingestion** — deterministic text extraction with `pypdf`
 - **LLM structured extraction** — skills, experience, education, projects into a typed schema
-- **Bring your own model** — OpenAI, Anthropic, Groq, Mistral, Together, Azure OpenAI, NVIDIA NIM, or **local** (Ollama / LM Studio)
+- **Bring your own model** — OpenAI, Anthropic, Groq, Mistral, Together, Azure OpenAI, NVIDIA NIM, or **local** (Ollama / LM Studio). I've been running **Qwen3.5 9B in LM Studio** day-to-day with impressively strong resume extraction, job structuring, and evidence-backed match analysis.
 - **Model picker** — fetches available models from your provider
 - **Human review** — edit extracted fields before saving (resume and job)
 - **Job intake wizard** — paste description → extract → review → save with automatic match
@@ -218,7 +220,7 @@ Then in Chrome:
 
 ### C. First run
 
-1. **Side panel** → onboarding → choose **Local** (LM Studio) or a cloud provider  
+1. **Side panel** → onboarding → choose **Local** → **LM Studio** (recommended: **Qwen3.5 9B**) or a cloud provider  
 2. **Upload or paste resume** → review fields → save profile  
 3. Open a **job posting** in a normal browser tab  
 4. Side panel → **Capture job from this tab** → review → **Save & analyze match**  
@@ -323,11 +325,13 @@ Provider and model selection is persisted in the `app_settings` singleton table.
 
 ## Local LLM setup (LM Studio)
 
-1. Download a model (e.g. Qwen 3.5 9B)
+I've been dogfooding AI Career OS with **LM Studio** and **Qwen3.5 9B** on my machine. Resume extraction, job capture structuring, explainable match scores (strengths, gaps, and resume evidence), company research, resume optimization, and cover letters all return **impressively usable results** — without sending your resume or job postings to a cloud LLM.
+
+1. Download **Qwen3.5 9B** (or another capable instruct model) in LM Studio
 2. Start the **OpenAI-compatible server** in LM Studio (default port `1234`)
 3. In onboarding, select **Local** → **LM Studio** preset
 4. Base URL: keep **`http://127.0.0.1:1234/v1`** in Settings — when the API runs in Docker it is rewritten automatically to reach your host (`host.docker.internal`). Use that URL directly only if you run the API on the host with `uv run`.
-5. Pick your loaded model from the dropdown
+5. Pick **Qwen3.5 9B** (or your loaded model) from the dropdown
 
 Ollama: same preset with port `11434`. Docker rewrites local URLs automatically; on a host-native API use `http://127.0.0.1:11434/v1`.
 
