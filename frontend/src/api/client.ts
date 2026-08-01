@@ -1,4 +1,4 @@
-import type { CompanyBrief, CoverLetterResult, Job, JobCreate, JobCreateResponse, JobIntakeHandoff, JobParseResult, MatchAnalysis, Profile, ProfileCreate, ResumeOptimizationResult, ResumeParseResult, ResumeSuggestion } from "../types";
+import type { CompanyBrief, CoverLetterResult, FeedbackEvent, FeedbackEventCreate, Job, JobCreate, JobCreateResponse, JobIntakeHandoff, JobParseResult, MatchAnalysis, Profile, ProfileCreate, ResumeOptimizationResult, ResumeParseResult, ResumeSuggestion } from "../types";
 import type { AppSettings, ListModelsRequest, ModelListResponse, SettingsUpdate } from "../types/settings";
 import { getApiBase } from "../lib/extensionRuntime";
 import {
@@ -172,6 +172,17 @@ export const api = {
       request<CoverLetterResult>(`/match-analyses/${analysisId}/cover-letter`, {
         method: "POST",
       }),
+  },
+
+  feedback: {
+    create: (data: FeedbackEventCreate) =>
+      request<FeedbackEvent>("/feedback", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    listForProfile: (profileId: string) =>
+      request<FeedbackEvent[]>(`/feedback?profile_id=${encodeURIComponent(profileId)}`),
+    listForJob: (jobId: string) => request<FeedbackEvent[]>(`/jobs/${jobId}/feedback`),
   },
 
   settings: {

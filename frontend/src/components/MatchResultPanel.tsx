@@ -1,6 +1,12 @@
 import type { MatchAnalysis, MatchResult, Job } from "../types";
 import { AiLoadingState } from "./AiLoadingState";
 import { MatchImprovementBanner } from "./MatchImprovementBanner";
+import {
+  GapDisputeFeedback,
+  MatchFeedbackPanel,
+  useJobFeedback,
+  type MatchFeedbackContext,
+} from "./MatchFeedbackControls";
 import { ScoreRing } from "./ScoreRing";
 import { Badge, Button, Card } from "./ui";
 
@@ -30,9 +36,17 @@ const recommendationLabels: Record<
   "do not apply": { label: "Skip", variant: "danger" },
 };
 
-function ResultContent({ result }: { result: MatchResult }) {
+function ResultContent({
+  result,
+  feedbackContext,
+}: {
+  result: MatchResult;
+  feedbackContext?: MatchFeedbackContext;
+}) {
   const rec = recommendationLabels[result.recommendation];
   const isLegacyScreen = result.depth === "screen";
+  const { events, loading, refresh } = useJobFeedback(feedbackContext?.jobId);
+  const showFeedback = Boolean(feedbackContext) && !isLegacyScreen && !loading;
 
   return (
     <div className="space-y-6">
@@ -51,6 +65,15 @@ function ResultContent({ result }: { result: MatchResult }) {
         <h3 className="mb-2 text-sm font-medium text-text-muted">Summary</h3>
         <p className="text-sm leading-relaxed text-text">{result.summary}</p>
       </div>
+
+      {showFeedback && feedbackContext && (
+        <MatchFeedbackPanel
+          context={feedbackContext}
+          gaps={result.gaps ?? []}
+          events={events}
+          onSubmitted={() => void refresh()}
+        />
+      )}
 
       {!isLegacyScreen && (result.strengths?.length ?? 0) > 0 && (
         <div>
@@ -87,6 +110,14 @@ function ResultContent({ result }: { result: MatchResult }) {
                     <Badge variant="warning">{g.point.toFixed(1)}/10</Badge>
                   </div>
                 </div>
+                {showFeedback && feedbackContext && (
+                  <GapDisputeFeedback
+                    context={feedbackContext}
+                    gap={g}
+                    events={events}
+                    onSubmitted={() => void refresh()}
+                  />
+                )}
               </li>
             ))}
           </ul>
@@ -202,7 +233,18 @@ export function MatchResultPanel({
       )}
 
       {analysis.status === "completed" && analysis.result && (
-        <ResultContent result={analysis.result} />
+        <ResultContent
+          result={analysis.result}
+          feedbackContext={
+            profileId && job
+              ? {
+                  profileId,
+                  jobId: job.id,
+                  analysisId: analysis.id,
+                }
+              : undefined
+          }
+        />
       )}
 
       {analysis.status === "completed" && !analysis.result && (

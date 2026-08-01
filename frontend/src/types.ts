@@ -138,6 +138,31 @@ export interface CoverLetterResult {
   critique_summary: string;
 }
 
+export type FeedbackEventType =
+  | "match_helpful"
+  | "gap_dispute"
+  | "strength_confirm"
+  | "preference"
+  | "application_outcome";
+
+export interface FeedbackEvent {
+  id: string;
+  profile_id: string;
+  job_id: string | null;
+  match_analysis_id: string | null;
+  event_type: FeedbackEventType;
+  payload: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface FeedbackEventCreate {
+  profile_id: string;
+  event_type: FeedbackEventType;
+  job_id?: string;
+  match_analysis_id?: string;
+  payload: Record<string, unknown>;
+}
+
 export interface ProfileCreate {
   name: string;
   headline?: string;
