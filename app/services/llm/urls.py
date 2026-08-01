@@ -23,6 +23,13 @@ def _rewrite_local_host(url: str, gateway: str) -> str:
     return url
 
 
+def _rewrite_docker_gateway_to_localhost(url: str, gateway: str) -> str:
+    url = url.replace(f"://{gateway}:", "://127.0.0.1:")
+    if url.endswith(f"://{gateway}"):
+        url = f"{url[: -len(gateway)]}127.0.0.1"
+    return url
+
+
 def normalize_openai_base_url(base_url: str) -> str:
     """Normalize OpenAI-compatible base URLs and end with /v1."""
     url = base_url.strip().rstrip("/")
@@ -30,6 +37,8 @@ def normalize_openai_base_url(base_url: str) -> str:
     if gateway:
         url = _rewrite_local_host(url, gateway)
     else:
+        # Host-native API: docker gateway URLs from saved settings won't resolve
+        url = _rewrite_docker_gateway_to_localhost(url, DEFAULT_DOCKER_HOST_GATEWAY)
         # Host-native: prefer 127.0.0.1 over localhost (macOS IPv6 hangs)
         url = url.replace("://localhost:", "://127.0.0.1:")
         if url.endswith("://localhost"):

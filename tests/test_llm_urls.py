@@ -12,6 +12,15 @@ def test_host_native_keeps_127():
     assert normalize_openai_base_url("http://127.0.0.1:1234/v1") == "http://127.0.0.1:1234/v1"
 
 
+def test_host_native_rewrites_docker_gateway_to_localhost(monkeypatch):
+    monkeypatch.delenv("LLM_HOST_GATEWAY", raising=False)
+    with patch.object(Path, "exists", return_value=False):
+        assert (
+            normalize_openai_base_url("http://host.docker.internal:1234/v1")
+            == "http://127.0.0.1:1234/v1"
+        )
+
+
 def test_docker_rewrites_localhost_to_host_gateway(monkeypatch):
     monkeypatch.setenv("LLM_HOST_GATEWAY", "host.docker.internal")
     assert (
