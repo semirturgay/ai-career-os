@@ -6,7 +6,7 @@ Last updated: 2026-07-31
 
 AI Career OS has a working **resume → job → explainable match → act** loop with **web-grounded company research**, **pgvector RAG**, and a **Chrome extension MVP** for job capture. The product direction is **extension-first**: source-agnostic DOM capture (never fetch job URLs), side panel for the full app, paste resume as primary onboarding.
 
-**Current milestone:** M7 in progress — [Chrome extension](extension.md) as main intake surface.
+**Current milestone:** M8 in progress — [memory + feedback loop](milestones/m8-memory-feedback.md). M7 extension capture remains the primary intake surface.
 
 ## Product flow (today)
 
@@ -72,7 +72,8 @@ Interactive docs: http://127.0.0.1:8000/docs
 
 | Priority | Milestone | Why |
 |----------|-----------|-----|
-| **Now** | [M7 — Chrome extension](extension.md) | Source-agnostic capture, LLM classify + extract, side panel as main UI |
+| **Now** | [M8 — Memory + feedback](milestones/m8-memory-feedback.md) | Capture user feedback, build career memory, inject into match |
+| Next | [M7 — Chrome extension](extension.md) polish | Source-agnostic capture, side panel as main UI |
 | Soon | Re-analyze on job update | JD edits should refresh match |
 | Soon | Tavily/Serper search in settings | Production-grade search |
 | Soon | Company brief → cover letter context | Richer outreach |

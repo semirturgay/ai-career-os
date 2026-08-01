@@ -26,6 +26,10 @@ class Profile(Base):
     )
 
     match_analyses: Mapped[list["MatchAnalysis"]] = relationship(back_populates="profile")
+    feedback_events: Mapped[list["FeedbackEvent"]] = relationship(
+        back_populates="profile",
+        cascade="all, delete-orphan",
+    )
     chunk_embeddings: Mapped[list["ResumeChunkEmbedding"]] = relationship(
         back_populates="profile",
         cascade="all, delete-orphan",
@@ -52,6 +56,28 @@ class Job(Base):
     )
 
     match_analyses: Mapped[list["MatchAnalysis"]] = relationship(back_populates="job")
+    feedback_events: Mapped[list["FeedbackEvent"]] = relationship(back_populates="job")
+
+
+class FeedbackEvent(Base):
+    """User feedback captured for career memory and downstream prompt context."""
+
+    __tablename__ = "feedback_events"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    profile_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("profiles.id"), index=True)
+    job_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("jobs.id"), index=True)
+    match_analysis_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("match_analyses.id"),
+        nullable=True,
+    )
+    event_type: Mapped[str] = mapped_column(String(50))
+    payload: Mapped[dict] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    profile: Mapped["Profile"] = relationship(back_populates="feedback_events")
+    job: Mapped["Job | None"] = relationship(back_populates="feedback_events")
+    match_analysis: Mapped["MatchAnalysis | None"] = relationship()
 
 
 class MatchAnalysis(Base):
@@ -98,6 +124,7 @@ from app.models.rag_embeddings import ResumeChunkEmbedding  # noqa: E402
 __all__ = [
     "AppSettings",
     "Base",
+    "FeedbackEvent",
     "Job",
     "MatchAnalysis",
     "Profile",
