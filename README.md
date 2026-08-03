@@ -5,7 +5,7 @@
 
 **An open-source AI operating system for career management** — starting with explainable job matching, not black-box auto-apply bots.
 
-Capture jobs from your browser with the **Chrome extension** (source-agnostic DOM read — no per-site integrations; LLM classifies and extracts on our backend), or paste descriptions in the web app. Upload or paste your resume, extract structured profile data with an LLM you control — including **local models via LM Studio** — review everything, and get **automatic explainable match analysis** — then research the company, tune your resume, and draft a cover letter.
+Capture jobs from your browser with the **Chrome extension** (source-agnostic DOM read — no per-site integrations; a local document classifier routes captures, then an LLM structures fields on our backend), or paste descriptions in the web app. Upload or paste your resume, extract structured profile data with an LLM you control — including **local models via LM Studio** — review everything, and get **automatic explainable match analysis** — then research the company, tune your resume, and draft a cover letter.
 
 <p align="center">
   <img src="docs/assets/demo/demo.gif" alt="AI Career OS demo — Chrome browser with job posting, side panel, resume extract, and capture animations" width="720" />
@@ -63,7 +63,7 @@ Long-term vision: an autonomous career assistant that discovers jobs, explains f
 - **Model picker** — fetches available models from your provider
 - **Human review** — edit extracted fields before saving (resume and job)
 - **Job intake wizard** — paste description → extract → review → save with automatic match
-- **Chrome extension (M7)** — source-agnostic capture from any page (generic DOM read); backend LLM classifies and extracts — no per-site heuristics
+- **Chrome extension (M7)** — source-agnostic capture from any page (generic DOM read); backend document classifier routes captures, LLM extracts fields — no per-site heuristics
 - **RAG-backed match** — retrieves relevant resume chunks before full analysis
 - **Job pipeline** — home dashboard ranks jobs by match score with polling
 - **Job detail tabs** — match, company research, resume optimization, cover letter (after full analysis)
@@ -119,6 +119,7 @@ flowchart LR
 | Validation | Pydantic v2 |
 | PDF | pypdf |
 | LLM client | httpx (OpenAI-compatible + structured output) |
+| Job capture classifier | [`smr123/resume-job-classifier`](https://huggingface.co/smr123/resume-job-classifier) via Hugging Face `transformers` (local, server-side) |
 | Frontend | Vite, React, TypeScript, Tailwind CSS |
 | Extension | Chrome Manifest V3 (source-agnostic DOM capture, side panel) |
 | Package managers | [uv](https://docs.astral.sh/uv/) (Python), [Bun](https://bun.sh) (frontend) |
@@ -246,7 +247,7 @@ Then in Chrome:
 
 ## Chrome extension
 
-Capture job text from **whatever page you have open**. The extension reads generic visible text from the active tab — we do not integrate with or special-case any job board. Our backend LLM decides whether the capture is a single job posting and extracts structured fields (not hostname rules or DOM heuristics). We never fetch third-party URLs.
+Capture job text from **whatever page you have open**. The extension reads generic visible text from the active tab — we do not integrate with or special-case any job board. Our backend runs a **local document classifier** to decide whether the capture is a single job posting, then an LLM extracts structured fields (not hostname rules or DOM heuristics). We never fetch third-party URLs.
 
 Policy: [docs/intake-policy.md](docs/intake-policy.md) · Architecture: [docs/extension.md](docs/extension.md) · Install details: [extension/README.md](extension/README.md)
 
@@ -275,7 +276,7 @@ sequenceDiagram
         User->>App: Confirm fields Save and analyze
         API->>API: Background match analysis
     else not capturable
-        Ext->>User: Show LLM message (e.g. open one job posting)
+        Ext->>User: Show classifier message (e.g. open one job posting)
     end
 ```
 
@@ -289,11 +290,25 @@ sequenceDiagram
 | Step | What happens |
 |------|----------------|
 | **Read DOM** | Inject script into the active tab; read generic visible text (no per-site selectors) |
-| **Classify** | Backend document classifier decides if this is one capturable job posting (`POST /jobs/classify-capture`) — chunked max-pool, not heuristics |
+| **Classify** | Backend document classifier decides if this is one capturable job posting (`POST /jobs/classify-capture`) — see below |
 | **Structure** | If capturable, LLM extracts fields (`POST /jobs/parse-text` → `JobExtraction`) |
 | **Review** | Hand off to side panel; you confirm before save |
 
 We do **not** integrate with, fetch from, or maintain extractors for any third-party site. Paste intake skips classification — user intent is explicit.
+
+#### Job capture classifier
+
+Extension routing uses **[`smr123/resume-job-classifier`](https://huggingface.co/smr123/resume-job-classifier)** — a fine-tuned 512-token Hugging Face model (`resume` / `job_post` / `other`), not an LLM prompt:
+
+```
+visible page text
+  → generic heading trim + UI noise filter
+  → overlapping chunks (~800 chars, ~200 overlap)
+  → classify each chunk locally (transformers)
+  → aggregate: job_post wins when qualifying chunks dominate
+```
+
+The model runs **on the backend** at classify time (first request downloads weights from Hugging Face). Tunable via `document_classifier_*` settings in [`app/config.py`](app/config.py). Predictions can append to `data/classifier_tuning_log.csv` for offline eval.
 
 ### Extension API calls (our backend only)
 
