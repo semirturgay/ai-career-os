@@ -1,0 +1,23 @@
+{
+  "score": 88.5,
+  "recommendation": "apply",
+  "strengths": [
+    {
+      "point": 9.5,
+      "evidence": "8 years of backend engineering experience with Python, FastAPI, and PostgreSQL."
+    }
+  ],
+  "gaps": [
+    {
+      "point": 4.5,
+      "severity": "medium",
+      "evidence": "AWS experience is listed as nice-to-have in the job description but is not explicitly mentioned in the resume."
+    },
+    {
+      "point": 3.0,
+      "severity": "low",
+      "evidence": "Kubernetes production experience is not explicitly listed in the resume."
+    }
+  ],
+  "summary": "Strong Python backend match with optional cloud gaps."
+}

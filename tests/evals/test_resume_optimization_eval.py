@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
+from uuid import uuid4
 
 import pytest
 
@@ -93,3 +94,55 @@ async def test_optimize_resume_pipeline_with_mocked_llm(case_name: str, case_dir
 
     failures = evaluate_resume_optimization(result, expected, case_name=case_name)
     assert not failures, "\n".join(failures)
+
+
+@pytest.mark.asyncio
+async def test_optimize_resume_injects_career_memory_fixture():
+    case_dir = FIXTURES_DIR / "with_career_memory"
+    profile_data = load_json(case_dir / "profile.json")
+    job_data = load_json(case_dir / "job.json")
+    match_data = load_json(case_dir / "match_result.json")
+    llm_response = load_json(case_dir / "llm_response.json")
+    memory_rows = load_json(case_dir / "career_memories.json")
+
+    profile_id = uuid4()
+    profile = SimpleNamespace(
+        id=profile_id,
+        structured_data=profile_data,
+        resume_text="Jane Doe resume text",
+        headline=profile_data.get("headline"),
+    )
+    job = SimpleNamespace(
+        title=job_data["title"],
+        company=job_data["company"],
+        description=job_data["description"],
+        location=job_data.get("location"),
+    )
+    match_result = MatchResult.model_validate(match_data)
+    memories = [SimpleNamespace(content=row["content"]) for row in memory_rows]
+
+    golden = ResumeOptimizationResult.model_validate(
+        normalize_resume_optimization_payload(llm_response)
+    )
+    mock_client = AsyncMock()
+    mock_client.generate_structured.return_value = golden
+
+    mock_db = AsyncMock()
+    result_mock = Mock()
+    result_mock.scalars.return_value.all.return_value = memories
+    mock_db.execute = AsyncMock(return_value=result_mock)
+
+    with patch(
+        "app.services.resume_optimizer.get_llm_client",
+        new=AsyncMock(return_value=mock_client),
+    ):
+        await optimize_resume_for_match(
+            db=mock_db,
+            profile=profile,
+            job=job,
+            match_result=match_result,
+        )
+
+    system_message = mock_client.generate_structured.await_args.kwargs["messages"][0].content
+    assert "Career memory (user corrections and preferences)" in system_message
+    assert "AWS ECS at Globex Inc" in system_message

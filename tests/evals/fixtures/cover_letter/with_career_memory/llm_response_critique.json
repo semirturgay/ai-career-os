@@ -1,0 +1,6 @@
+{
+  "unsupported_claims": [],
+  "missing_strengths": [],
+  "tone_issues": ["Body exceeds 400 characters"],
+  "revision_notes": "Shorten to under 400 characters while keeping the FastAPI hook and company name."
+}

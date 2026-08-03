@@ -1,0 +1,6 @@
+{
+  "min_suggestions": 1,
+  "must_include_sections": ["experience"],
+  "must_include_gap_terms": ["AWS"],
+  "summary_not_empty": true
+}

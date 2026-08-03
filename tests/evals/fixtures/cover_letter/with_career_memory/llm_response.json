@@ -1,0 +1,9 @@
+{
+  "body": "Dear FinTech Labs, I'm a senior Python engineer with 8 years building FastAPI APIs at scale. My Acme Corp microservices work fits your payment API role. I'd welcome discussing how I can contribute.",
+  "tone": "concise",
+  "highlights_used": [
+    "8 years Python backend experience",
+    "FastAPI microservices migration at Acme Corp"
+  ],
+  "critique_summary": "Shortened the draft to stay under 400 characters and led with FastAPI strength."
+}

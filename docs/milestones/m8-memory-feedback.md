@@ -1,6 +1,6 @@
 # Milestone 8: Memory + feedback loop
 
-**Status:** In progress  
+**Status:** Done  
 **Concepts:** Structured memory, user feedback capture, prompt context injection, eval-friendly audit trail
 
 ## Problem
@@ -111,7 +111,7 @@ CareerMemory
 - Job `application_status` column (promoted from feedback events for query speed)
 - Pipeline filters: Applied / Interviewing / Rejected
 - “Similar past outcomes” hint on job detail (same company, same gap pattern) — read-only v1
-- Cover letter + resume optimization prompts get `{career_memory}` block (same snippets)
+- Cover letter + resume optimization prompts get `{career_memory}` block (same snippets) — **done**
 
 **Acceptance:** Pipeline filter works; status change writes both `FeedbackEvent` and `Job.application_status`.
 
@@ -144,9 +144,9 @@ Add `tests/evals/fixtures/match/with_career_memory/` when Phase 2 lands.
 | **3** | `POST/GET /feedback` routes + tests | Done |
 | **4** | Match panel feedback UI (helpful + gap dispute) | Done |
 | **5** | Job application status UI + `application_outcome` events | Done |
-| **6** | `CareerMemory` model + synthesizer + match prompt injection | AI behavior |
-| **7** | Pipeline filters + job status column | Product polish |
-| **8** | Golden eval + docs update in `project-status.md` | Quality gate |
+| **6** | `CareerMemory` model + synthesizer + match prompt injection | Done |
+| **7** | Pipeline filters + job status column | Done |
+| **8** | Career memory in cover letter + resume optimization + golden evals | Done |
 
 ## References
 

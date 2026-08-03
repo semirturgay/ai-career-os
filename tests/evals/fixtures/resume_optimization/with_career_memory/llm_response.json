@@ -1,0 +1,23 @@
+{
+  "summary": "Reframe Acme Corp API work with cloud keywords and surface adjacent DevOps tooling already implied by CI/CD experience.",
+  "suggestions": [
+    {
+      "gap_evidence": "AWS experience is listed as nice-to-have in the job description but is not explicitly mentioned in the resume.",
+      "section": "experience",
+      "action": "rewrite",
+      "target_label": "Acme Corp — Senior Backend Engineer, bullet 1",
+      "current_text": "Designed REST and GraphQL APIs serving 2M daily requests.",
+      "suggested_text": "Designed REST and GraphQL APIs on AWS (ECS, RDS) serving 2M daily requests.",
+      "rationale": "Surfaces cloud deployment context using job-relevant AWS terms without inventing a new role."
+    },
+    {
+      "gap_evidence": "Kubernetes production experience is not explicitly listed in the resume.",
+      "section": "skills",
+      "action": "add",
+      "target_label": "Skills list",
+      "current_text": null,
+      "suggested_text": "Kubernetes",
+      "rationale": "Adds the orchestration keyword only if the candidate can substantiate container experience in follow-up."
+    }
+  ]
+}

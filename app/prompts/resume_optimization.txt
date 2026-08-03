@@ -9,6 +9,16 @@ Your task: suggest concrete, honest resume improvements that address the gaps.
 
 ------------------------------------------------------------
 
+Career memory (user corrections and preferences)
+
+These notes come from the candidate's prior feedback on past match analyses.
+Use them to avoid suggesting edits that contradict corrections the user already made.
+Resume text still takes precedence — do not invent experience from memory alone.
+
+{career_memory}
+
+------------------------------------------------------------
+
 Required JSON shape
 
 {

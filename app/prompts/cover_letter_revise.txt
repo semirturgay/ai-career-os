@@ -5,6 +5,17 @@ You will receive:
 2. Critique
 3. Retrieved resume evidence, job, optional company research brief, and match context
 
+------------------------------------------------------------
+
+Career memory (user corrections and preferences)
+
+These notes come from the candidate's prior feedback on past match analyses.
+Honor user corrections — do not reintroduce claims they disputed.
+
+{career_memory}
+
+------------------------------------------------------------
+
 Produce a polished final letter that fixes unsupported claims, adds missing strengths, and applies revision notes.
 
 Required JSON shape:

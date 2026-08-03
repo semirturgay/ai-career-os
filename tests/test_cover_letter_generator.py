@@ -1,5 +1,6 @@
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
+from uuid import uuid4
 
 import pytest
 
@@ -73,6 +74,78 @@ async def test_generate_cover_letter_runs_draft_critique_revise_chain():
     assert mock_client.generate_structured.await_count == 3
     assert "FastAPI" in result.body
     assert result.critique_summary == "Added missing FastAPI strength."
+
+
+@pytest.mark.asyncio
+async def test_generate_cover_letter_injects_career_memory_in_system_prompts():
+    profile_id = uuid4()
+    profile = SimpleNamespace(id=profile_id, structured_data={"name": "Jane"}, resume_text="Jane")
+    job = SimpleNamespace(
+        title="Engineer",
+        company="Acme",
+        description="Python backend",
+        location=None,
+        raw_metadata={},
+        company_brief=None,
+    )
+    match_result = MatchResult(
+        score=85.0,
+        recommendation="apply",
+        strengths=[MatchStrength(point=9.0, evidence="Python experience.")],
+        gaps=[MatchGap(point=4.0, severity="low", evidence="No AWS listed.")],
+        summary="Strong match.",
+    )
+
+    draft = CoverLetterDraft(
+        body="Dear Acme,\n\nI am excited to apply.",
+        tone="professional",
+        highlights_used=["Python experience"],
+    )
+    critique = CoverLetterCritique(
+        unsupported_claims=[],
+        missing_strengths=[],
+        tone_issues=[],
+        revision_notes="Looks good.",
+    )
+    final = CoverLetterResult(
+        body="Dear Acme,\n\nI am excited to apply.",
+        tone="professional",
+        highlights_used=["Python experience"],
+        critique_summary="No changes.",
+    )
+
+    mock_client = AsyncMock()
+    mock_client.generate_structured = AsyncMock(side_effect=[draft, critique, final])
+    memory = SimpleNamespace(
+        content='User disputes this gap: "Missing AWS". Their note: Globex project',
+    )
+
+    mock_db = AsyncMock()
+    result_mock = Mock()
+    result_mock.scalars.return_value.all.return_value = [memory]
+    mock_db.execute = AsyncMock(return_value=result_mock)
+
+    with (
+        patch(
+            "app.services.cover_letter_generator.get_llm_client",
+            new=AsyncMock(return_value=mock_client),
+        ),
+        patch(
+            "app.services.cover_letter_generator._retrieve_cover_letter_chunks",
+            new=AsyncMock(return_value=[]),
+        ),
+    ):
+        await generate_cover_letter(
+            db=mock_db,
+            profile=profile,
+            job=job,
+            match_result=match_result,
+        )
+
+    for call in mock_client.generate_structured.await_args_list:
+        system_message = call.kwargs["messages"][0].content
+        assert "Career memory (user corrections and preferences)" in system_message
+        assert "Globex project" in system_message
 
 
 def test_build_cover_letter_user_message_includes_company_brief_and_rag_chunks():

@@ -2,6 +2,17 @@ You are an expert editor reviewing a short cover letter draft against the job, c
 
 Identify issues before the letter is sent.
 
+------------------------------------------------------------
+
+Career memory (user corrections and preferences)
+
+These notes come from the candidate's prior feedback on past match analyses.
+Flag unsupported claims that contradict user corrections. Resume evidence still wins.
+
+{career_memory}
+
+------------------------------------------------------------
+
 Required JSON shape:
 
 {

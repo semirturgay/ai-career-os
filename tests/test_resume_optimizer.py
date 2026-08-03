@@ -1,5 +1,6 @@
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
+from uuid import uuid4
 
 import pytest
 
@@ -98,6 +99,65 @@ async def test_optimize_resume_for_match_calls_llm():
 
     assert output.summary == "Reframe cloud bullets."
     assert len(output.suggestions) == 1
+
+
+@pytest.mark.asyncio
+async def test_optimize_resume_injects_career_memory_in_system_prompt():
+    optimization = ResumeOptimizationResult(
+        summary="Reframe cloud bullets.",
+        suggestions=[
+            ResumeSuggestion(
+                gap_evidence="No AWS listed.",
+                section="experience",
+                action="rewrite",
+                target_label="Acme — Engineer, bullet 1",
+                current_text="Built APIs with Python.",
+                suggested_text="Built APIs with Python on AWS.",
+                rationale="Highlights existing cloud work.",
+            )
+        ],
+    )
+    mock_client = AsyncMock()
+    mock_client.generate_structured.return_value = optimization
+
+    profile_id = uuid4()
+    profile = SimpleNamespace(id=profile_id, structured_data={"name": "Jane"}, resume_text="Jane")
+    job = SimpleNamespace(
+        title="Backend Engineer",
+        company="Acme",
+        description="AWS required",
+        location=None,
+    )
+    match_result = MatchResult(
+        score=70.0,
+        recommendation="maybe apply",
+        strengths=[],
+        gaps=[MatchGap(point=6.0, severity="medium", evidence="No AWS listed.")],
+        summary="Decent match.",
+    )
+    memory = SimpleNamespace(
+        content='User disputes this gap: "Missing AWS". Their note: Globex project',
+    )
+
+    mock_db = AsyncMock()
+    result_mock = Mock()
+    result_mock.scalars.return_value.all.return_value = [memory]
+    mock_db.execute = AsyncMock(return_value=result_mock)
+
+    with patch(
+        "app.services.resume_optimizer.get_llm_client",
+        new=AsyncMock(return_value=mock_client),
+    ):
+        await optimize_resume_for_match(
+            db=mock_db,
+            profile=profile,
+            job=job,
+            match_result=match_result,
+        )
+
+    system_message = mock_client.generate_structured.await_args.kwargs["messages"][0].content
+    assert "Career memory (user corrections and preferences)" in system_message
+    assert "Globex project" in system_message
 
 
 def test_apply_suggestions_rewrites_experience_highlight():

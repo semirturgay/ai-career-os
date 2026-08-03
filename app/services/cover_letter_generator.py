@@ -4,8 +4,8 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.logging_config import get_logger
 from app.models import Job, Profile
-from app.prompts import load_prompt
 from app.schemas.company_research import CompanyBrief, CompanyBriefContent
 from app.schemas.cover_letter import CoverLetterCritique, CoverLetterDraft, CoverLetterResult
 from app.schemas.match_analysis import MatchResult
@@ -17,8 +17,12 @@ from app.services.cover_letter_normalize import (
 )
 from app.services.llm import Message, get_llm_client
 from app.services.match.formatters import format_job, format_profile
+from app.services.memory.context import load_active_memories
+from app.services.memory.prompts import build_system_prompt_with_career_memory
 from app.services.rag.match_context import format_rag_resume_section, retrieve_for_match
 from app.services.rag.retrieval import get_embedding_provider
+
+logger = get_logger(__name__)
 
 
 def _parse_company_brief(value: object) -> CompanyBriefContent | None:
@@ -141,6 +145,21 @@ async def generate_cover_letter(
 ) -> CoverLetterResult:
     client = await get_llm_client(db)
     rag_chunks = await _retrieve_cover_letter_chunks(db, profile, job)
+    memories: list = []
+    profile_id = getattr(profile, "id", None)
+    if db is not None and profile_id is not None:
+        memories = await load_active_memories(db, profile_id)
+    if memories:
+        logger.info(
+            "Cover letter career memory: profile=%s snippets=%d",
+            profile_id,
+            len(memories),
+        )
+
+    draft_prompt = build_system_prompt_with_career_memory("cover_letter_draft", memories)
+    critique_prompt = build_system_prompt_with_career_memory("cover_letter_critique", memories)
+    revise_prompt = build_system_prompt_with_career_memory("cover_letter_revise", memories)
+
     context = build_cover_letter_user_message(
         profile,
         job,
@@ -150,7 +169,7 @@ async def generate_cover_letter(
 
     draft = await client.generate_structured(
         messages=[
-            Message(role="system", content=load_prompt("cover_letter_draft")),
+            Message(role="system", content=draft_prompt),
             Message(role="user", content=context),
         ],
         response_model=CoverLetterDraft,
@@ -160,7 +179,7 @@ async def generate_cover_letter(
 
     critique = await client.generate_structured(
         messages=[
-            Message(role="system", content=load_prompt("cover_letter_critique")),
+            Message(role="system", content=critique_prompt),
             Message(
                 role="user",
                 content=build_cover_letter_user_message(
@@ -178,7 +197,7 @@ async def generate_cover_letter(
 
     final = await client.generate_structured(
         messages=[
-            Message(role="system", content=load_prompt("cover_letter_revise")),
+            Message(role="system", content=revise_prompt),
             Message(
                 role="user",
                 content=build_cover_letter_user_message(

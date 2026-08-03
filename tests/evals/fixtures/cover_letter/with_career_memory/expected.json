@@ -1,0 +1,8 @@
+{
+  "max_body_chars": 400,
+  "must_include_terms": ["Python", "FastAPI"],
+  "must_include_company": "FinTech Labs",
+  "min_highlights": 1,
+  "critique_summary_not_empty": true,
+  "allowed_tones": ["professional", "warm", "concise"]
+}
