@@ -8,7 +8,7 @@ Capture job text from the page you are viewing and send it into the **classify �
 
 1. You open any page that shows a job posting.
 2. Open the side panel and click **Capture job from this tab**.
-3. Generic DOM text → `POST /jobs/classify-capture` (LLM: is this one job posting?) → if capturable, `POST /jobs/parse-text` → handoff → review in panel.
+3. Generic DOM text → `POST /jobs/classify-capture` (document classifier: is this one job posting?) → if capturable, `POST /jobs/parse-text` → handoff → review in panel.
 4. You confirm fields and **Save & analyze match** in the embedded React app.
 
 If the page is a search-results list or unrelated content, the classifier returns a message (e.g. “open one job posting first”) — we do not guess from URL or site name.
@@ -44,7 +44,7 @@ After updating extension JS or rebuilding the UI, click **Reload** on `chrome://
 | Step | Behavior |
 |------|----------|
 | Read | `executeScript` on the active tab — generic visible text (no per-site selectors) |
-| Classify | `POST /jobs/classify-capture` — backend LLM, not heuristics |
+| Classify | `POST /jobs/classify-capture` — backend document classifier, not heuristics |
 | Structure | If capturable, `POST /jobs/parse-text` |
 | Review | Side panel handoff — nothing saved until you confirm |
 

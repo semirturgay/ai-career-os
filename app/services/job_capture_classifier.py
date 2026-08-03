@@ -1,47 +1,19 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.prompts import load_prompt
 from app.schemas.job_capture import JobCaptureClassification
-from app.services.llm import Message, get_llm_client
+from app.services.document_classifier.page_classifier import classify_page_text
+from app.services.intake_validation import job_capture_from_document
 
 
-def build_capture_classification_message(
-    text: str,
-    *,
-    page_title: str | None = None,
-    page_url: str | None = None,
-) -> str:
-    parts: list[str] = []
-    if page_title:
-        parts.append(f"Browser tab title: {page_title.strip()}")
-    if page_url:
-        parts.append(f"Page URL (metadata only, not fetched): {page_url.strip()}")
-    if parts:
-        parts.append("")
-    parts.append("Captured visible page text:")
-    parts.append(text.strip())
-    return "\n".join(parts)
-
-
-async def classify_job_capture(
-    db: AsyncSession,
+def classify_job_capture(
     text: str,
     *,
     page_title: str | None = None,
     page_url: str | None = None,
 ) -> JobCaptureClassification:
-    client = await get_llm_client(db)
-    return await client.generate_structured(
-        messages=[
-            Message(role="system", content=load_prompt("job_capture_classification")),
-            Message(
-                role="user",
-                content=build_capture_classification_message(
-                    text,
-                    page_title=page_title,
-                    page_url=page_url,
-                ),
-            ),
-        ],
-        response_model=JobCaptureClassification,
+    del page_url
+    classification = classify_page_text(text, page_title=page_title)
+    page_type, is_capturable, user_message = job_capture_from_document(classification)
+    return JobCaptureClassification(
+        page_type=page_type,
+        is_capturable=is_capturable,
+        user_message=user_message,
     )

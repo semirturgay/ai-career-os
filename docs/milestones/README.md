@@ -13,7 +13,7 @@ Incremental build plan. Each milestone adds one capability and is validated befo
 | 4 | [Resume optimization](m4-resume-optimization.md) | Reflection, iterative refinement | **Done** |
 | 5 | [Progressive match + cover letter](m5-progressive-match-cover-letter.md) | Staged inference, reflection chain | **Done** |
 | 6 | [Company research](m6-company-research.md) | Bounded agent loop, web search | **Done** |
-| 7 | Job discovery | Source-agnostic extension capture (DOM + LLM classify), paste resume | **In progress** |
+| 7 | Job discovery | Source-agnostic extension capture (DOM + document classifier), paste resume | **In progress** |
 | 8 | [Memory + feedback loop](m8-memory-feedback.md) | Structured feedback, career memory, prompt injection | **Done** |
 | 9 | Interview preparation | Multi-step planning, structured curricula | Planned |
 | 10 | Application automation | Human-in-the-loop, guardrails | Planned |

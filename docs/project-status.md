@@ -16,7 +16,7 @@ flowchart LR
     B --> C[(Profile)]
     C --> D[Capture or paste job]
     D --> E{Extension capture?}
-    E -->|yes| F[LLM classify]
+    E -->|yes| F[Document classifier]
     F --> G[Extract fields]
     E -->|paste| G
     G --> H[Review and save]
@@ -41,7 +41,7 @@ flowchart LR
 | Paste resume intake (`POST /profiles/parse-text`) | Done |
 | Profile CRUD + settings (BYOM: cloud + local) | Done |
 | Job intake wizard (paste → review → save) | Done |
-| Job capture classification (`POST /jobs/classify-capture`) | Done |
+| Job capture classification (`POST /jobs/classify-capture`, document classifier) | Done |
 | Source-agnostic extension DOM capture (no per-site extractors) | Done |
 | Explainable match + match on job insert | Done |
 | Progressive match (screen → full at intake) | Done |

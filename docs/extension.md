@@ -18,12 +18,12 @@ This extends the repo-wide rule in [vision.md](vision.md): *no job scraping*.
 
 ## Source-agnostic by design
 
-We do **not** care which site the user is on. There are no per-platform extractors, hostname routers, or CSS selector maps for Greenhouse, LinkedIn, Wellfound, etc.
+We do **not** care which site the user is on. There are no per-platform extractors, hostname routers, or CSS selector maps.
 
 | Step | Who | How |
 |------|-----|-----|
 | Read visible text | Extension | Generic DOM read (`main` / `article` / `body`, strip chrome) |
-| Is this one job posting? | Backend LLM | `POST /jobs/classify-capture` — **not** heuristics |
+| Is this one job posting? | Backend document classifier | `POST /jobs/classify-capture` — chunked max-pool, not heuristics |
 | Extract title, company, requirements | Backend LLM | `POST /jobs/parse-text` |
 
 If the user is on a search-results page or unrelated tab, the classifier returns `is_capturable: false` with an actionable message (e.g. “open one job posting first”). We do not guess from URL or site name.
@@ -49,7 +49,7 @@ Same human-in-the-loop pattern as job intake.
 |-------|------|
 | **Side panel** | Full app UI (pipeline, match, research) + **Capture job from active tab** CTA |
 | **Service worker** | Inject scripts on user capture, call **our** API only |
-| **Backend** | LLM classify + structure, match, storage — unchanged |
+| **Backend** | Document classifier + LLM structure, match, storage |
 
 Capture → classify → parse → review → save → match stays one pipeline; the extension replaces “open localhost tab” as the shell.
 

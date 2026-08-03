@@ -6,7 +6,7 @@ JobCapturePageType = Literal["job_detail", "job_list", "other"]
 
 
 class JobCaptureClassification(BaseModel):
-    """LLM assessment of browser-captured visible text."""
+    """Document-classifier assessment of browser-captured visible text."""
 
     page_type: JobCapturePageType = Field(
         description=(

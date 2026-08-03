@@ -1,5 +1,5 @@
 {
-  "expect_page_type": "job_list",
+  "expect_page_type": "other",
   "expect_capturable": false,
-  "user_message_contains": "search"
+  "user_message_contains": "job posting"
 }

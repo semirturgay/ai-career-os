@@ -18,6 +18,7 @@ from app.logging_config import (
     get_logger,
     setup_logging,
 )
+from app.services.document_classifier.tuning_log import log_classifier_tuning_log_location
 from app.services.http_client import close_http_client, init_http_client
 
 setup_logging()
@@ -27,6 +28,7 @@ logger = get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting %s", settings.app_name)
+    log_classifier_tuning_log_location()
     await init_http_client()
     yield
     logger.info("Shutting down — disposing DB engine and HTTP client")

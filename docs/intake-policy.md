@@ -32,13 +32,14 @@ When adding intake features, ask: *“Does this read what the user already sees,
 
 ## Source-agnostic capture
 
-We do **not** integrate with, special-case, or maintain extractors for any job board or ATS (LinkedIn, Greenhouse, Wellfound, Lever, etc.).
+We do **not** integrate with, special-case, or maintain extractors for any job board or ATS.
 
 | Layer | Responsibility |
 |-------|------------------|
 | **Extension** | Read generic visible text from the active tab (strip nav/footer noise only) |
-| **Backend LLM** | Classify whether the capture is a single job posting; extract structured fields |
+| **Backend classifier** | Chunk visible text, classify each chunk, max-pool `job_post` score |
+| **Backend LLM** | Extract structured fields from capturable job text (`POST /jobs/parse-text`) |
 
-Capture validation and field extraction are **LLM tasks** (`POST /jobs/classify-capture`, `POST /jobs/parse-text`) — not hostname rules, CSS selector maps, or heuristics about “what a job page looks like.”
+Capture validation is a **document classifier task** (`POST /jobs/classify-capture`); field extraction remains an **LLM task** (`POST /jobs/parse-text`) — not hostname rules, CSS selector maps, or heuristics about “what a job page looks like.”
 
 Paste intake skips classification: the user explicitly provides job text.

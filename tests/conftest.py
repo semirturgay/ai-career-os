@@ -13,6 +13,12 @@ from app.services.rag.retrieval import DeterministicEmbeddingProvider
 
 
 @pytest.fixture(autouse=True)
+def disable_document_classifier_in_tests(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Avoid loading transformers models during tests."""
+    monkeypatch.setattr("app.config.settings.document_classifier_enabled", False)
+
+
+@pytest.fixture(autouse=True)
 def deterministic_embedding_provider(monkeypatch: pytest.MonkeyPatch) -> None:
     """Avoid downloading fastembed models during tests."""
     provider = DeterministicEmbeddingProvider()

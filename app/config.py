@@ -26,6 +26,15 @@ class Settings(BaseSettings):
     cover_letter_llm_max_tokens: int = 512
     app_web_url: str = "http://localhost:5173"
 
+    document_classifier_enabled: bool = True
+    document_classifier_model: str = "smr123/resume-job-classifier"
+    document_classifier_min_confidence: float = 0.45
+    document_classifier_max_length: int = 512
+    document_classifier_chunk_size: int = 800
+    document_classifier_chunk_overlap: int = 200
+    document_classifier_tuning_log_enabled: bool = True
+    document_classifier_tuning_log_path: str = "data/classifier_tuning_log.csv"
+
     # Optional env fallbacks for LLM (overridden by DB settings when set)
     openai_api_key: str | None = None
     anthropic_api_key: str | None = None

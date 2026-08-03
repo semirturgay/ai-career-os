@@ -136,17 +136,13 @@ async def parse_job_text(body: JobParseRequest, db: AsyncSession = Depends(get_d
 
 
 @router.post("/jobs/classify-capture", response_model=JobCaptureClassification)
-async def classify_captured_job_text(
-    body: JobCaptureClassifyRequest,
-    db: AsyncSession = Depends(get_db),
-):
+async def classify_captured_job_text(body: JobCaptureClassifyRequest):
     logger.info(
         "Classifying captured job page text (%d chars, title=%r)",
         len(body.text),
         body.page_title,
     )
-    return await classify_job_capture(
-        db,
+    return classify_job_capture(
         body.text,
         page_title=body.page_title,
         page_url=body.page_url,

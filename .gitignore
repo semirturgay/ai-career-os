@@ -11,6 +11,7 @@ dist/
 dist/
 build/
 pgdata/
+data/classifier_tuning_log.csv
 
 # Cursor local memory (private, not for public repo)
 .cursor/

@@ -289,7 +289,7 @@ sequenceDiagram
 | Step | What happens |
 |------|----------------|
 | **Read DOM** | Inject script into the active tab; read generic visible text (no per-site selectors) |
-| **Classify** | Backend LLM decides if this is one capturable job posting (`POST /jobs/classify-capture`) — not heuristics |
+| **Classify** | Backend document classifier decides if this is one capturable job posting (`POST /jobs/classify-capture`) — chunked max-pool, not heuristics |
 | **Structure** | If capturable, LLM extracts fields (`POST /jobs/parse-text` → `JobExtraction`) |
 | **Review** | Hand off to side panel; you confirm before save |
 
@@ -299,7 +299,7 @@ We do **not** integrate with, fetch from, or maintain extractors for any third-p
 
 | Endpoint | Purpose |
 |----------|---------|
-| `POST /api/v1/jobs/classify-capture` | LLM: is this a single job posting? |
+| `POST /api/v1/jobs/classify-capture` | Document classifier: is this a single job posting? |
 | `POST /api/v1/jobs/parse-text` | Structure captured or pasted job text |
 | `POST /api/v1/jobs/intake-handoff` | Hand off to web app review (30 min TTL) |
 | `GET /api/v1/jobs/by-url` | Duplicate URL hint |
@@ -455,7 +455,7 @@ Base path: `/api/v1`
 | PATCH | `/profiles/{id}` | Update profile |
 | GET | `/profiles/{id}/resume.pdf` | Download profile as PDF |
 | DELETE | `/profiles/{id}` | Delete profile |
-| POST | `/jobs/classify-capture` | LLM: is captured text a single job posting? |
+| POST | `/jobs/classify-capture` | Document classifier: is captured text a single job posting? |
 | POST | `/jobs/parse-text` | Paste or captured JD → structured `JobExtraction` |
 | POST | `/jobs/intake-handoff` | Extension handoff → web app review screen |
 | GET | `/jobs/intake-handoff/{id}` | Load a pending extension capture |
@@ -491,7 +491,7 @@ Full interactive docs: http://127.0.0.1:8000/docs
 | **M4** Resume optimization | Done | Gap-driven suggestions with review before apply |
 | **M5** Cover letter | Done | 3-pass cover letter chain on job detail |
 | **M6** Company research | Done | Bounded agent loop + web search + source-grounded brief |
-| **M7** Chrome extension | **In progress** | Source-agnostic DOM capture, LLM classify + extract, extension-first intake |
+| **M7** Chrome extension | **In progress** | Source-agnostic DOM capture, document classifier + LLM extract, extension-first intake |
 | — | Planned | Re-analyze on job update, production search providers |
 
 Details: [docs/milestones/](docs/milestones/README.md) · Current state: [docs/project-status.md](docs/project-status.md)
@@ -508,7 +508,7 @@ Details: [docs/milestones/](docs/milestones/README.md) · Current state: [docs/p
 
 | Doc | Contents |
 |-----|----------|
-| [docs/intake-policy.md](docs/intake-policy.md) | **DOM/paste only — source-agnostic, LLM classify** |
+| [docs/intake-policy.md](docs/intake-policy.md) | **DOM/paste only — source-agnostic, document classifier** |
 | [docs/extension.md](docs/extension.md) | Chrome extension principles and architecture |
 | [extension/README.md](extension/README.md) | Load unpacked, capture flow, side panel |
 | [docs/ai-engineering.md](docs/ai-engineering.md) | Evals, tracing, structured outputs, patterns |
