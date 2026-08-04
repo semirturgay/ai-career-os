@@ -8,6 +8,7 @@ Required JSON shape:
 {
   "name": "string",
   "headline": "string or null",
+  "location": "Istanbul, Türkiye",
   "email": "string or null",
   "phone": "string or null",
   "skills": ["string"],
@@ -44,6 +45,12 @@ name
 headline
 - The professional title or tagline directly under the name (e.g. "Staff Software Engineer | Python, FastAPI").
 - Do NOT use the Summary section as the headline.
+
+location (IMPORTANT for match analysis)
+- Candidate's base city/region/country when explicitly stated (contact line, header, or summary).
+- Examples: "Berlin, Germany", "San Francisco, CA", "Istanbul, Türkiye", "Remote (US)"
+- Do NOT infer from employer HQ unless the resume states where the candidate is based.
+- Leave null if not stated.
 
 email / phone
 - Top-level string fields. Do NOT nest contact info under a "contact" object.

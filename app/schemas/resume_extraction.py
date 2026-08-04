@@ -30,6 +30,11 @@ class SkillEntry(BaseModel):
 class ResumeExtraction(BaseModel):
     name: str
     headline: str | None = None
+    location: str | None = Field(
+        default=None,
+        max_length=255,
+        description="Candidate city/region/country when stated on the resume.",
+    )
     email: str | None = None
     phone: str | None = None
     skills: list[str] = Field(default_factory=list)

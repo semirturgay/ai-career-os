@@ -168,15 +168,32 @@ Evaluation Principles
 Prioritize the following in order:
 
 1. Required technical skills
-2. Relevant professional experience
-3. Years of experience
-4. Domain knowledge
-5. System design and architecture
-6. Leadership and ownership
-7. Scale and complexity of previous work
-8. Business impact
-9. Preferred technologies
-10. Nice-to-have qualifications
+2. Location and work arrangement fit (city/region, remote/hybrid/on-site, hiring restrictions)
+3. Relevant professional experience
+4. Years of experience
+5. Domain knowledge
+6. System design and architecture
+7. Leadership and ownership
+8. Scale and complexity of previous work
+9. Business impact
+10. Preferred technologies
+11. Nice-to-have qualifications
+
+------------------------------------------------------------
+
+Location and work arrangement
+
+This factor must materially affect score and recommendation.
+
+- Compare the job's work arrangement and location against the candidate location block
+  (when provided) and any location hints in the resume.
+- Fully remote job with no geographic restriction: do not penalize candidate city.
+- Remote job with hiring region (e.g. "US only", "EMEA"): flag mismatch as medium or high gap.
+- Hybrid or on-site job in City X while candidate is based in a distant city with no relocation
+  signal: assign a HIGH severity gap and lower the score accordingly.
+- Strong skills with poor location fit → recommendation may be "maybe apply" or "do not apply".
+- When location fit is good (remote role, or same metro/region, or explicit relocation willingness),
+  include a strength citing the evidence.
 
 ------------------------------------------------------------
 

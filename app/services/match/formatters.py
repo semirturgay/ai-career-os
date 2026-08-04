@@ -15,16 +15,28 @@ def format_profile(profile: Profile) -> str:
     return profile.resume_text.strip()
 
 
+def candidate_location(profile: Profile) -> str | None:
+    data = profile.structured_data
+    if not isinstance(data, dict):
+        return None
+    location = data.get("location")
+    if isinstance(location, str) and location.strip():
+        return location.strip()
+    return None
+
+
 def format_job(job: Job) -> str:
+    metadata = getattr(job, "raw_metadata", None) or {}
+    work_mode = metadata.get("work_mode")
     parts = [
         f"Title: {job.title}",
         f"Company: {job.company}",
     ]
     if job.location:
         parts.append(f"Location: {job.location}")
-    parts.append("")
-    parts.append("Description:")
-    parts.append(job.description.strip())
+    if isinstance(work_mode, str) and work_mode.strip():
+        parts.append(f"Work arrangement: {work_mode.strip()}")
+    parts.extend(["", "Description:", job.description.strip()])
     return "\n".join(parts)
 
 
@@ -33,14 +45,17 @@ def format_job_for_match(job: Job) -> str:
     if not settings.match_compact_job_prompt:
         return format_job(job)
 
-    metadata = job.raw_metadata or {}
+    metadata = getattr(job, "raw_metadata", None) or {}
     requirements = metadata.get("requirements")
+    work_mode = metadata.get("work_mode")
     parts = [
         f"Title: {job.title}",
         f"Company: {job.company}",
     ]
     if job.location:
         parts.append(f"Location: {job.location}")
+    if isinstance(work_mode, str) and work_mode.strip():
+        parts.append(f"Work arrangement: {work_mode.strip()}")
 
     if isinstance(requirements, list):
         cleaned = [str(item).strip() for item in requirements if str(item).strip()]
@@ -80,5 +95,9 @@ async def build_match_user_message(
             resume_block = f"Structured resume:\n\n{format_profile(profile)}"
     else:
         resume_block = f"Structured resume:\n\n{format_profile(profile)}"
+
+    location = candidate_location(profile)
+    if location:
+        resume_block = f"Candidate location: {location}\n\n{resume_block}"
 
     return f"{resume_block}\n\nJob description:\n\n{job_block}"

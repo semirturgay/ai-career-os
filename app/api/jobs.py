@@ -127,9 +127,11 @@ async def parse_job_text(body: JobParseRequest, db: AsyncSession = Depends(get_d
     extraction = await structure_job(db, job_text)
 
     logger.info(
-        "Structured job posting — title=%r, company=%r, requirements=%d",
+        "Structured job posting — title=%r, company=%r, work_mode=%r, location=%r, requirements=%d",
         extraction.title,
         extraction.company,
+        extraction.work_mode,
+        extraction.location,
         len(extraction.requirements),
     )
     return JobParseRead(job_text=job_text, structured_data=extraction)

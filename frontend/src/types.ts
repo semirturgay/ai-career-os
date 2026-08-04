@@ -21,6 +21,7 @@ export interface ProjectEntry {
 export interface ResumeStructuredData {
   name: string;
   headline?: string | null;
+  location?: string | null;
   email?: string | null;
   phone?: string | null;
   skills: string[];

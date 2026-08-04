@@ -10,14 +10,14 @@ Required JSON shape:
   "company": "Acme Corp",
   "work_mode": "remote",
   "location": "Berlin, Germany",
-  "description": "Full job description text with responsibilities and qualifications.",
-  "match_summary": "Senior backend role building Python payment APIs at scale for a global fintech platform.",
   "employment_type": "full-time",
   "salary_range": null,
+  "match_summary": "Senior backend role building Python payment APIs at scale for a global fintech platform.",
   "requirements": [
     "5+ years of Python experience",
     "Experience with FastAPI or similar async web frameworks"
-  ]
+  ],
+  "description": "Full job description text with responsibilities and qualifications."
 }
 
 Field rules:
@@ -38,13 +38,25 @@ work_mode (IMPORTANT — populate whenever workplace arrangement is stated)
   - flexible → Flexible work arrangement when no clearer mode is given
 - If the posting explicitly requires office presence, use "on-site".
 - Do not leave null when any of these concepts appear anywhere in the posting (title line, metadata, bullets, or footer).
+- Ignore workplace words inside the job title when they describe skills or constraints, not arrangement — e.g. "(C++, Onsite)" in a title means onsite skill context, not work_mode. Prefer metadata lines, location badges, and subtitle lines instead.
 
-location (IMPORTANT — populate geographic place when stated)
-- City, region, state, country, or "US only" / "EMEA" style hiring region.
-- Examples: "San Francisco, CA", "Berlin, Germany", "United Kingdom", "US only"
-- Do NOT put work_mode words here (Remote, Hybrid, On-site) — those go in work_mode.
-- Leave null only when no geographic or regional constraint is mentioned.
-- Scan the entire posting: title/subtitle line (e.g. "Acme · Remote · Berlin"), location labels, and requirement bullets.
+location (IMPORTANT — geographic place only; never work_mode words here)
+- City, region, state, country, or hiring region such as "US only" / "EMEA".
+- Examples: "San Francisco, CA", "Berlin, Germany", "Istanbul, Türkiye", "United Kingdom"
+- Do NOT put Remote, Hybrid, On-site, WFH, or similar in location — those belong in work_mode.
+- Leave null only when no geographic or regional constraint is mentioned anywhere for this role.
+- Common patterns to scan for (anywhere in the text, not just the first line):
+  - "City, Region, Country" (comma-separated place names)
+  - "City (Remote)", "City (Hybrid)", "City (On-site)" — extract City into location
+  - Metadata lines separated by · or | that mix place and timing, e.g. "Istanbul, Türkiye · Posted 2 days ago" — extract the place, ignore Posted/Applicants/Reposted noise
+  - Standalone place names on their own line near the company/title block
+- When both work_mode and a place appear, return BOTH fields separately (e.g. work_mode="on-site", location="Istanbul, Türkiye").
+
+Noisy page content (copied from a job board)
+- Input often includes navigation, search filters, other job cards, messaging UI, footers, and duplicate title/company lines. Ignore that chrome.
+- Find the ONE job this capture is about: match title + company, then read the detail block around "About the job" / "Job description" / responsibilities.
+- Prefer location and work_mode from that detail block's header (lines right above the description) over snippets from other jobs in a sidebar or feed.
+- If the same city appears in a feed card and in the detail header, prefer the fuller form from the detail header (e.g. "Istanbul, Istanbul, Türkiye" over "Istanbul" alone).
 
 description
 - The complete job description: role summary, responsibilities, qualifications.
@@ -68,10 +80,11 @@ requirements
 - Empty array if none are clearly listed.
 
 Location extraction checklist (follow before returning JSON):
-1. Read the first 1–3 lines — job boards often put "Company · Remote · City" or "Title — Hybrid — London" there.
-2. Set work_mode if Remote/Hybrid/On-site/WFH appears anywhere.
-3. Set location if any city, country, or hiring region appears anywhere.
-4. Both fields may be set (e.g. work_mode=hybrid, location=Berlin, Germany).
+1. Identify the correct job block (title + company + description) and ignore other listings on the page.
+2. Scan that block's header/metadata for work_mode badges and geographic lines (including ·-separated metadata).
+3. Set work_mode if Remote/Hybrid/On-site/WFH appears for this role (not from unrelated job cards).
+4. Set location to the geographic place for this role — city/region/country only, never work_mode words.
+5. Both fields may be set (e.g. work_mode="on-site", location="Istanbul, Türkiye").
 
 Strict rules:
 
@@ -86,4 +99,5 @@ Example outputs:
 {"work_mode": "remote", "location": "United States"}
 {"work_mode": "hybrid", "location": "Berlin, Germany"}
 {"work_mode": "on-site", "location": "San Francisco, CA"}
+{"work_mode": "on-site", "location": "Istanbul, Türkiye"}
 {"work_mode": null, "location": "London, UK"}

@@ -26,3 +26,5 @@ async def test_structure_job_calls_llm_client():
 
     assert result.title == "Backend Engineer"
     mock_client.generate_structured.assert_awaited_once()
+    call_kwargs = mock_client.generate_structured.await_args.kwargs
+    assert call_kwargs.get("max_tokens") == 8192

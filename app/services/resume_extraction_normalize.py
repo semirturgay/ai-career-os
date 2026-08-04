@@ -128,6 +128,9 @@ def normalize_resume_payload(data: dict[str, Any]) -> dict[str, Any]:
     return {
         "name": _as_str(data.get("name")) or "Unknown",
         "headline": headline,
+        "location": _as_str(data.get("location"))
+        or _as_str(data.get("city"))
+        or _as_str(data.get("address")),
         "email": email,
         "phone": phone,
         "skills": _merge_skills(data),
