@@ -78,9 +78,9 @@ export function HomePage() {
       }
       showCaptureBar={embedded ? true : undefined}
     >
-      <div className={embedded ? "space-y-4" : "space-y-8"}>
+      <div className={embedded ? "min-w-0 space-y-4" : "space-y-8"}>
         <section
-          className={`rounded-xl border border-border bg-surface-raised ${
+          className={`min-w-0 rounded-xl border border-border bg-surface-raised ${
             embedded ? "px-3 py-3" : "p-6 shadow-sm sm:p-8"
           }`}
         >
@@ -150,7 +150,7 @@ export function HomePage() {
         </section>
 
         {!isEmptyPipeline && (
-          <section className="space-y-3">
+          <section className="min-w-0 space-y-3">
             <div>
               <h3 className={`font-semibold ${embedded ? "text-base" : "text-lg"}`}>Opportunities</h3>
               <p className="text-xs text-text-muted sm:text-sm">

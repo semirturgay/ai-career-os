@@ -140,7 +140,7 @@ export function JobReviewPage() {
 
   if (loadingHandoff || !parsed) {
     return (
-      <Layout title="Add job" subtitle="Review captured details">
+      <Layout title="Add job" subtitle="Review captured details" showCaptureBar={false}>
         <div className="mx-auto max-w-2xl animate-pulse space-y-4 py-12">
           {error ? (
             <ErrorBanner message={error} />
@@ -196,7 +196,7 @@ export function JobReviewPage() {
   const canSave = title.trim() && company.trim() && description.trim() && !duplicateJob;
 
   return (
-    <Layout title="Add job" subtitle="Confirm details — then we analyze your fit">
+    <Layout title="Add job" subtitle="Confirm details — then we analyze your fit" showCaptureBar={false}>
       {saving && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface/90 backdrop-blur-sm">
           <PageLoader variant="match-full" />

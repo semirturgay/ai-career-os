@@ -71,11 +71,11 @@ function JobOpportunityCard({
   const progress = getApplicationProgress(job, analysis);
 
   return (
-    <li>
+    <li className="min-w-0">
       <Link
         to={`/jobs/${job.id}`}
         state={{ fromPipeline: true }}
-        className={`group block rounded-xl border border-border bg-surface-raised transition hover:border-accent/30 hover:shadow-sm ${
+        className={`group block min-w-0 rounded-xl border border-border bg-surface-raised transition hover:border-accent/30 hover:shadow-sm ${
           compact ? "border-l-[3px] p-3" : "border-l-4 p-4"
         } ${scoreAccentClass(score)}`}
       >
@@ -191,7 +191,7 @@ export function JobBoard({
   });
 
   return (
-    <ul className={`grid gap-2.5 ${embedded ? "" : "sm:gap-3"}`}>
+    <ul className={`grid min-w-0 gap-2.5 ${embedded ? "" : "sm:gap-3"}`}>
       {sorted.map((job, index) => (
         <JobOpportunityCard
           key={job.id}

@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { AiLoadingState } from "../components/AiLoadingState";
 import { Layout } from "../components/Layout";
 import { ProviderForm } from "../components/ProviderForm";
-import { Badge, Button } from "../components/ui";
+import { Badge } from "../components/ui";
 import type { LLMProvider } from "../types/settings";
 import { normalizeProvider, PROVIDER_REGISTRY } from "../types/settings";
 
@@ -34,7 +33,7 @@ export function SettingsPage() {
   }, []);
 
   return (
-    <Layout title="Settings" subtitle="AI provider and credentials">
+    <Layout title="Settings" subtitle="AI provider and credentials" backTo="/" backLabel="Pipeline">
       <div className="space-y-8">
         <div className="flex items-start justify-between gap-4 lg:hidden">
           <p className="text-sm text-text-muted">
@@ -81,10 +80,6 @@ export function SettingsPage() {
           Current provider: {PROVIDER_REGISTRY[initialProvider].label}
           {initialModel ? ` · ${initialModel}` : ""}
         </p>
-
-        <Link to="/">
-          <Button variant="ghost">← Back to pipeline</Button>
-        </Link>
       </div>
     </Layout>
   );

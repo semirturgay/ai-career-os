@@ -31,7 +31,7 @@ export function JobNewPage() {
       title="Add job"
       subtitle={
         IS_EXTENSION
-          ? "Capture from the tab above, or paste a description below"
+          ? "Paste a description below, or use the capture bar at the bottom"
           : "Paste a job description — we extract fields and analyze your fit"
       }
     >

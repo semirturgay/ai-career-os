@@ -4,8 +4,8 @@ export function ExtensionEmptyPipeline() {
       <p className="text-[10px] font-semibold uppercase tracking-wider text-accent">Next step</p>
       <h3 className="mt-1 text-base font-semibold text-text">Capture a job from your browser</h3>
       <p className="mt-2 text-sm leading-relaxed text-text-muted">
-        Use the bar above to capture from your active tab, or paste a description if you don&apos;t
-        have a posting open. You review before saving — then we run explainable match analysis.
+        Use the floating capture bar at the bottom, or paste a description if you don&apos;t have a
+        posting open. You review before saving — then we run explainable match analysis.
       </p>
 
       <ol className="mt-4 space-y-2.5">

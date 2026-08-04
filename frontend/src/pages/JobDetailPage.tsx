@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { JobExtraction } from "../types";
 import { AiLoadingState, PageLoader } from "../components/AiLoadingState";
@@ -151,7 +151,12 @@ export function JobDetailPage() {
 
   if (loading || !job) {
     return (
-      <Layout title="Job" subtitle="Opportunity details">
+      <Layout
+        title="Job"
+        subtitle="Opportunity details"
+        backTo={embedded ? "/" : undefined}
+        backLabel="Pipeline"
+      >
         <PageLoader variant="page" />
       </Layout>
     );
@@ -323,12 +328,13 @@ export function JobDetailPage() {
   );
 
   return (
-    <Layout title={job.title} subtitle={`${job.company}${job.location ? ` · ${job.location}` : ""}`}>
+    <Layout
+      title={job.title}
+      subtitle={`${job.company}${job.location ? ` · ${job.location}` : ""}`}
+      backTo={embedded ? "/" : undefined}
+      backLabel="Pipeline"
+    >
       <div className="space-y-6">
-        <Link to="/" className="text-sm text-text-muted hover:text-accent lg:hidden">
-          ← Pipeline
-        </Link>
-
         {duplicateCapture && duplicateJob && (
           <DuplicateJobBanner job={duplicateJob} context="capture" />
         )}

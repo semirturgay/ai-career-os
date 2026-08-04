@@ -38,6 +38,8 @@ export function useCaptureFromActiveTab() {
     });
   }, []);
 
+  const clearError = useCallback(() => setError(null), []);
+
   const capture = useCallback(async () => {
     setCapturing(true);
     setError(null);
@@ -59,5 +61,5 @@ export function useCaptureFromActiveTab() {
     }
   }, [navigate, tabHint, windowId]);
 
-  return { capturing, error, tabHint, tabBlocked, capture };
+  return { capturing, error, tabHint, tabBlocked, capture, clearError };
 }

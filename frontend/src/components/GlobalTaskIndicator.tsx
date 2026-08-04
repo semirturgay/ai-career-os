@@ -26,9 +26,9 @@ export function GlobalTaskIndicator() {
       aria-live="polite"
     >
       {running.length > 0 || pendingMatchCount > 0 ? (
-        <p className="flex items-center gap-2">
-          <span className="size-2 animate-pulse rounded-full bg-accent" aria-hidden />
-          <span>
+        <p className="flex min-w-0 items-center gap-2">
+          <span className="size-2 shrink-0 animate-pulse rounded-full bg-accent" aria-hidden />
+          <span className="min-w-0 truncate">
             {primary}
             {running.length + pendingMatchCount > 1
               ? ` · ${running.length + pendingMatchCount} tasks in progress`
