@@ -5,12 +5,8 @@ from pydantic import BaseModel, Field
 WorkMode = Literal["remote", "hybrid", "on-site", "flexible"]
 
 
-class JobExtraction(BaseModel):
-    """Structured job posting extraction.
-
-    Field order is intentional: metadata (work_mode, location) comes before
-    description/requirements so JSON-schema completions emit them before long text.
-    """
+class JobExtractionFields(BaseModel):
+    """Shared job extraction fields — field order is intentional for JSON-schema completions."""
 
     title: str = Field(min_length=1, max_length=500)
     company: str = Field(min_length=1, max_length=255)
@@ -37,4 +33,19 @@ class JobExtraction(BaseModel):
         description="1–2 sentence summary of the role for fast match screening.",
     )
     requirements: list[str] = Field(default_factory=list)
+
+
+class JobExtractionLLM(JobExtractionFields):
+    """LLM structured output — description is a short teaser only."""
+
+    description: str = Field(
+        min_length=1,
+        max_length=100,
+        description="Brief role teaser — max 100 characters, not the full posting.",
+    )
+
+
+class JobExtraction(JobExtractionFields):
+    """Full structured job posting used in API responses and storage."""
+
     description: str = Field(min_length=1)

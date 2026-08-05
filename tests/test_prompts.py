@@ -34,6 +34,6 @@ def test_load_company_research_prompts():
 
 def test_load_job_extraction_prompt():
     prompt = load_prompt("job_extraction")
-    assert "JobExtraction schema" in prompt
+    assert "JobExtractionLLM schema" in prompt
     assert '"requirements"' in prompt
     assert "Never invent" in prompt

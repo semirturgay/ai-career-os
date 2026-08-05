@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     match_rag_per_requirement_top_k: int = 3
     match_compact_job_prompt: bool = True
     match_llm_max_tokens: int = 768
-    job_extraction_llm_max_tokens: int = 8192
+    job_extraction_llm_max_tokens: int = 2048
     cover_letter_max_body_chars: int = 400
     cover_letter_llm_max_tokens: int = 512
     app_web_url: str = "http://localhost:5173"

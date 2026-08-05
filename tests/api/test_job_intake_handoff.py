@@ -26,6 +26,26 @@ def _sample_extraction() -> JobExtraction:
 
 
 @pytest.mark.asyncio
+async def test_create_handoff_accepts_long_description(api_client):
+    extraction = _sample_extraction()
+    long_description = "About the job\n" + ("We build APIs. " * 200)
+    payload = extraction.model_dump()
+    payload["description"] = long_description
+
+    create_response = await api_client.post(
+        "/api/v1/jobs/intake-handoff",
+        json={
+            "job_text": long_description,
+            "structured_data": payload,
+            "url": "https://example.com/jobs/456",
+            "source": "generic",
+        },
+    )
+    assert create_response.status_code == 201
+    assert len(create_response.json()["structured_data"]["description"]) > 100
+
+
+@pytest.mark.asyncio
 async def test_create_and_read_intake_handoff(api_client):
     extraction = _sample_extraction()
     create_response = await api_client.post(

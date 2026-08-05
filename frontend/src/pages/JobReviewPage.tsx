@@ -98,7 +98,7 @@ export function JobReviewPage() {
     setTitle(extraction.title);
     setCompany(extraction.company);
     setLocationText(extraction.location ?? "");
-    setDescription(extraction.description);
+    setDescription(parsed.job_text.trim() || extraction.description);
     setRequirements(extraction.requirements);
     setWorkMode(extraction.work_mode ?? null);
     setEmploymentType(extraction.employment_type ?? null);

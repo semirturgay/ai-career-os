@@ -1,7 +1,6 @@
 {
   "title_contains": "Backend Engineer",
   "company_contains": "FinTech",
-  "min_description_length": 100,
   "min_requirements": 3,
   "must_include_requirements": ["Python", "FastAPI"],
   "work_mode": "remote",

@@ -2,6 +2,17 @@ from app.schemas.job_extraction import JobExtraction
 from app.services.job_extraction_normalize import normalize_job_payload
 
 
+def test_normalize_truncates_long_description():
+    payload = normalize_job_payload(
+        {
+            "title": "Engineer",
+            "company": "Acme",
+            "description": "x" * 150,
+        }
+    )
+    assert len(payload["description"]) == 100
+
+
 def test_normalize_job_payload_maps_aliases():
     payload = normalize_job_payload(
         {

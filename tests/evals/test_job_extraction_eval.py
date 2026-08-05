@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from app.schemas.job_extraction import JobExtraction
+from app.schemas.job_extraction import JobExtractionLLM
 from app.services.job_extraction_normalize import normalize_job_payload
 from app.services.job_structurer import structure_job
 from tests.evals.eval_assertions import load_json
@@ -35,7 +35,7 @@ def test_golden_job_response_meets_expectations(case_name: str, case_dir: Path):
     expected = load_json(case_dir / "expected.json")
 
     normalized = normalize_job_payload(llm_response)
-    extraction = JobExtraction.model_validate(normalized)
+    extraction = JobExtractionLLM.model_validate(normalized)
 
     failures = evaluate_job_extraction(extraction, expected, case_name=case_name)
     assert not failures, "\n".join(failures)
@@ -48,7 +48,7 @@ async def test_structure_job_pipeline_with_mocked_llm(case_name: str, case_dir: 
     llm_response = load_json(case_dir / "llm_response.json")
     expected = load_json(case_dir / "expected.json")
 
-    golden = JobExtraction.model_validate(normalize_job_payload(llm_response))
+    golden = JobExtractionLLM.model_validate(normalize_job_payload(llm_response))
     mock_client = AsyncMock()
     mock_client.generate_structured.return_value = golden
 
@@ -60,7 +60,7 @@ async def test_structure_job_pipeline_with_mocked_llm(case_name: str, case_dir: 
 
     mock_client.generate_structured.assert_awaited_once()
     call_kwargs = mock_client.generate_structured.await_args.kwargs
-    assert call_kwargs["response_model"] is JobExtraction
+    assert call_kwargs["response_model"] is JobExtractionLLM
     assert "Senior Backend Engineer" in call_kwargs["messages"][-1].content
 
     failures = evaluate_job_extraction(extraction, expected, case_name=case_name)

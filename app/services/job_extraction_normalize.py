@@ -133,6 +133,8 @@ def normalize_job_payload(data: dict[str, Any]) -> dict[str, Any]:
             _as_str(data.get("qualifications_text")),
         ]
         description = "\n\n".join(part for part in parts if part)
+    if description and len(description) > 100:
+        description = description[:100].rstrip()
 
     work_mode = _extract_work_mode(data)
     geographic = _extract_geographic_location(data)
