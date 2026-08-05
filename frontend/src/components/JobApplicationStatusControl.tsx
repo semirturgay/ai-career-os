@@ -10,21 +10,26 @@ import {
   latestApplicationOutcome,
 } from "../lib/applicationStatus";
 import { Badge, Button, Field, Select, Textarea } from "./ui";
+import { CollapsibleSection } from "./CollapsibleSection";
 
 interface JobApplicationStatusControlProps {
   profileId: string;
   jobId: string;
+  /** Collapsed toolbar style for side panel / when match is running. */
+  compact?: boolean;
 }
 
 export function JobApplicationStatusControl({
   profileId,
   jobId,
+  compact = false,
 }: JobApplicationStatusControlProps) {
   const pipeline = useOptionalPipelineSync();
   const { events, loading, refresh } = useJobFeedback(jobId);
   const current = latestApplicationOutcome(events, jobId);
   const [status, setStatus] = useState<ApplicationOutcomeStatus>(current.status);
   const [note, setNote] = useState("");
+  const [showNote, setShowNote] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
@@ -33,6 +38,7 @@ export function JobApplicationStatusControl({
     if (loading) return;
     setStatus(current.status);
     setNote("");
+    setShowNote(false);
     setSavedMessage(null);
   }, [current.status, loading, events.length]);
 
@@ -57,6 +63,7 @@ export function JobApplicationStatusControl({
       await refresh();
       await pipeline?.refreshPipeline();
       setNote("");
+      setShowNote(false);
       setSavedMessage(`Status updated to ${applicationStatusLabel(status).toLowerCase()}.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update application status");
@@ -69,6 +76,70 @@ export function JobApplicationStatusControl({
 
   if (loading) {
     return null;
+  }
+
+  const statusSelect = (
+    <Select
+      value={status}
+      onChange={(event) => setStatus(event.target.value as ApplicationOutcomeStatus)}
+      className={compact ? "py-1.5 text-sm" : undefined}
+    >
+      {APPLICATION_STATUS_OPTIONS.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </Select>
+  );
+
+  const saveRow = (
+    <div className={`flex flex-wrap items-center gap-3 ${compact ? "" : "mt-4"}`}>
+      <Button
+        className={compact ? "px-3 py-1.5 text-xs" : "px-3 py-1.5"}
+        loading={submitting}
+        disabled={!dirty}
+        onClick={() => void handleSave()}
+      >
+        Save status
+      </Button>
+      {savedMessage && <p className="text-xs text-success sm:text-sm">{savedMessage}</p>}
+      {error && <p className="text-xs text-danger sm:text-sm">{error}</p>}
+    </div>
+  );
+
+  if (compact) {
+    return (
+      <CollapsibleSection
+        title="Application status"
+        trailing={
+          <Badge variant={applicationStatusVariant(current.status)}>
+            {applicationStatusLabel(current.status)}
+          </Badge>
+        }
+        contentClassName="space-y-3 border-t border-border px-5 py-4"
+      >
+        <Field label="Status">{statusSelect}</Field>
+        {showNote ? (
+          <Field label="Note">
+            <Textarea
+              rows={2}
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+              placeholder="Optional context for future you"
+            />
+          </Field>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowNote(true)}
+            className="text-left text-xs text-accent hover:underline"
+          >
+            Add note
+          </button>
+        )}
+        {saveRow}
+      </CollapsibleSection>
+    );
   }
 
   return (
@@ -86,19 +157,7 @@ export function JobApplicationStatusControl({
       </div>
 
       <div className="mt-4 grid gap-4 sm:grid-cols-[minmax(0,220px)_1fr]">
-        <Field label="Update status">
-          <Select
-            value={status}
-            onChange={(event) => setStatus(event.target.value as ApplicationOutcomeStatus)}
-          >
-            {APPLICATION_STATUS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </Select>
-        </Field>
-
+        <Field label="Update status">{statusSelect}</Field>
         <Field label="Note (optional)" hint="Interview date, recruiter name, why you passed, etc.">
           <Textarea
             rows={2}
@@ -109,13 +168,7 @@ export function JobApplicationStatusControl({
         </Field>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        <Button className="px-3 py-1.5" loading={submitting} disabled={!dirty} onClick={() => void handleSave()}>
-          Save status
-        </Button>
-        {savedMessage && <p className="text-sm text-success">{savedMessage}</p>}
-        {error && <p className="text-sm text-danger">{error}</p>}
-      </div>
+      {saveRow}
     </section>
   );
 }

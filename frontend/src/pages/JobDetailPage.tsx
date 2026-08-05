@@ -16,6 +16,7 @@ import {
 } from "../lib/jobExtraction";
 import { Badge, Button, ErrorBanner } from "../components/ui";
 import { DuplicateJobBanner } from "../components/DuplicateJobBanner";
+import { CollapsibleSection } from "../components/CollapsibleSection";
 import { JobApplicationStatusControl } from "../components/JobApplicationStatusControl";
 import { useEmbeddedMode } from "../hooks/useEmbeddedMode";
 import type { DuplicateJobInfo } from "../lib/jobUrl";
@@ -167,7 +168,10 @@ export function JobDetailPage() {
     : [];
   const canReExtract = canExtractFromText(buildJobExtractSource(job));
   const analysisPending = analysis?.status === "pending";
+  const matchRunning = analyzing || analysisPending;
   const showAnalyzeButton = !analysisPending;
+  const statusCompact = embedded || matchRunning;
+  const statusAfterMatch = embedded || matchRunning;
   const analyzeLabel =
     analysis?.status === "failed"
       ? "Retry analysis"
@@ -181,15 +185,46 @@ export function JobDetailPage() {
   const focusNextStep = fromPipeline && !focusTab && !fromIntake;
   const matchFirst = embedded || fromIntake;
 
+  const applicationStatus = (
+    <JobApplicationStatusControl
+      profileId={profile.id}
+      jobId={job.id}
+      compact={statusCompact}
+    />
+  );
+
+  const matchSection = (
+    <section ref={matchSectionRef}>
+      <JobDetailTabs
+        job={job}
+        analysis={analysis}
+        profileName={profile.name}
+        showProgress={fromIntake || analysisPending}
+        initialTab={focusTab}
+        focusNextStep={focusNextStep}
+        onJobUpdated={setJob}
+        onRefreshJob={handleRefreshJob}
+        onReAnalyze={handleAnalyze}
+        analyzing={analyzing}
+        jobAnalyses={jobAnalyses}
+        profileId={profile.id}
+      />
+    </section>
+  );
+
   const jobDetailsSection = matchFirst ? (
-    <details className="rounded-xl border border-border bg-surface-raised">
-      <summary className="cursor-pointer px-5 py-4 text-sm font-medium text-text hover:bg-surface-overlay/50">
-        Job description · {job.company}
-        {requirements.length > 0 && (
-          <span className="ml-2 font-normal text-text-muted">({requirements.length} requirements)</span>
-        )}
-      </summary>
-      <div className="space-y-4 border-t border-border px-5 py-4">
+    <CollapsibleSection
+      title={
+        <>
+          Job description · {job.company}
+          {requirements.length > 0 && (
+            <span className="ml-2 font-normal text-text-muted">
+              ({requirements.length} requirements)
+            </span>
+          )}
+        </>
+      }
+    >
         {job.url && (
           <a
             href={job.url}
@@ -225,8 +260,7 @@ export function JobDetailPage() {
             Re-extract fields
           </Button>
         </div>
-      </div>
-    </details>
+    </CollapsibleSection>
   ) : (
     <section className="rounded-xl border border-border bg-surface-raised p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -341,49 +375,19 @@ export function JobDetailPage() {
 
         {error && <ErrorBanner message={error} />}
 
-        <JobApplicationStatusControl profileId={profile.id} jobId={job.id} />
-
         {reExtracting && <AiLoadingState variant="job-extract" size="sm" />}
 
-        {matchFirst ? (
+        {matchFirst || statusAfterMatch ? (
           <>
-            <section ref={matchSectionRef}>
-              <JobDetailTabs
-                job={job}
-                analysis={analysis}
-                profileName={profile.name}
-                showProgress={fromIntake || analysisPending}
-                initialTab={focusTab}
-                focusNextStep={focusNextStep}
-                onJobUpdated={setJob}
-                onRefreshJob={handleRefreshJob}
-                onReAnalyze={handleAnalyze}
-                analyzing={analyzing}
-                jobAnalyses={jobAnalyses}
-                profileId={profile.id}
-              />
-            </section>
+            {matchSection}
             {jobDetailsSection}
+            {applicationStatus}
           </>
         ) : (
           <>
+            {applicationStatus}
             {jobDetailsSection}
-            <section ref={matchSectionRef}>
-              <JobDetailTabs
-                job={job}
-                analysis={analysis}
-                profileName={profile.name}
-                showProgress={fromIntake || analysisPending}
-                initialTab={focusTab}
-                focusNextStep={focusNextStep}
-                onJobUpdated={setJob}
-                onRefreshJob={handleRefreshJob}
-                onReAnalyze={handleAnalyze}
-                analyzing={analyzing}
-                jobAnalyses={jobAnalyses}
-                profileId={profile.id}
-              />
-            </section>
+            {matchSection}
           </>
         )}
       </div>

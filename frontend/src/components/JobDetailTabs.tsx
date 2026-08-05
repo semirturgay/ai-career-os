@@ -12,6 +12,7 @@ import { JobProgressBar } from "./JobProgressBar";
 import { MatchResultPanel } from "./MatchResultPanel";
 import { MatchAnalysisProgress } from "./MatchAnalysisProgress";
 import { ResumeOptimizationPanel } from "./ResumeOptimizationPanel";
+import { AiLoadingState } from "./AiLoadingState";
 
 export type JobDetailTab = "match" | "company" | "resume" | "cover";
 
@@ -126,7 +127,11 @@ export function JobDetailTabs({
 
   return (
     <div ref={tabsRef} id="job-tools" className="scroll-mt-4 space-y-4">
-      {analysis && (
+      {(analyzing || analysis?.status === "pending") && (
+        <AiLoadingState variant="match-full" size="sm" />
+      )}
+
+      {analysis && analysis.status !== "pending" && !analyzing && (
         <section className="rounded-xl border border-border bg-surface-raised px-3 py-3">
           <JobProgressBar
             progress={applicationProgress}
@@ -138,9 +143,11 @@ export function JobDetailTabs({
         </section>
       )}
 
-      {showProgress && <MatchAnalysisProgress analysis={analysis} showUnlocks={analysisComplete} />}
+      {showProgress && !analyzing && analysis?.status !== "pending" && (
+        <MatchAnalysisProgress analysis={analysis} showUnlocks={analysisComplete} />
+      )}
 
-      {!analysisComplete && analysis?.status === "pending" && (
+      {!analysisComplete && analysis?.status === "pending" && !analyzing && (
         <p className="text-sm text-text-muted">
           Match analysis running — follow-up steps unlock when full analysis completes.
         </p>

@@ -1,5 +1,4 @@
 import type { MatchAnalysis, MatchResult, Job } from "../types";
-import { AiLoadingState } from "./AiLoadingState";
 import { MatchImprovementBanner } from "./MatchImprovementBanner";
 import {
   GapDisputeFeedback,
@@ -223,8 +222,6 @@ export function MatchResultPanel({
           />
         </div>
       )}
-
-      {analysis.status === "pending" && <AiLoadingState variant="match-full" size="md" />}
 
       {analysis.status === "failed" && (
         <div className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
