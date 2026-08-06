@@ -14,6 +14,75 @@ def _normalize_url(url: str) -> str:
     return urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", "", "")).casefold()
 
 
+def normalize_discovery_url(url: str) -> str:
+    return _normalize_url(url)
+
+
+def known_urls_from_existing(existing: list[dict]) -> frozenset[str]:
+    urls: set[str] = set()
+    for item in existing:
+        url = item.get("url")
+        if isinstance(url, str) and url.strip():
+            urls.add(normalize_discovery_url(url))
+    return frozenset(urls)
+
+
+def guess_company_from_result(result: SearchResult) -> str:
+    title = result.title.strip()
+    for separator in (" - ", " | ", " at ", " @ "):
+        if separator in title:
+            tail = title.rsplit(separator, 1)[-1].strip()
+            if tail and len(tail) <= 80:
+                return tail
+    host = hostname_from_url(result.url)
+    if host.startswith("boards."):
+        host = host.removeprefix("boards.")
+    if host.startswith("jobs."):
+        host = host.removeprefix("jobs.")
+    label = host.split(".")[0]
+    return label.replace("-", " ").title() if label else "Unknown"
+
+
+def fallback_candidates_from_results(
+    results: list[SearchResult],
+    *,
+    known_urls: frozenset[str],
+    seen_at: datetime,
+    max_candidates: int = 8,
+) -> list[dict]:
+    from app.services.job_discovery.filters import is_likely_job_listing
+
+    candidates: list[dict] = []
+    seen: set[str] = set()
+
+    for result in results:
+        key = normalize_discovery_url(result.url)
+        if key in known_urls or key in seen:
+            continue
+        if not is_likely_job_listing(result):
+            continue
+        seen.add(key)
+        candidates.append(
+            {
+                "id": f"candidate_{uuid.uuid4()}",
+                "title": result.title,
+                "company": guess_company_from_result(result),
+                "url": result.url,
+                "snippet": result.snippet,
+                "source": hostname_from_url(result.url),
+                "fit_score": 55,
+                "fit_reason": "Matched discovery search; review posting to confirm fit.",
+                "dismissed": False,
+                "first_seen_at": seen_at.isoformat(),
+                "last_seen_at": seen_at.isoformat(),
+            }
+        )
+        if len(candidates) >= max_candidates:
+            break
+
+    return candidates
+
+
 def merge_candidates(
     existing: list[dict],
     incoming: list[dict],

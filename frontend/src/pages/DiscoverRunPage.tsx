@@ -133,8 +133,8 @@ export function DiscoverRunPage() {
               <Button
                 type="button"
                 variant="secondary"
-                loading={actionLoading && isRunning}
-                disabled={isRunning}
+                loading={actionLoading || isRunning}
+                disabled={isRunning || actionLoading}
                 onClick={() => void runNow()}
               >
                 Run now

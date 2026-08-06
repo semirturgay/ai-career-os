@@ -11,7 +11,7 @@ from app.logging_config import get_logger
 from app.models import JobDiscovery, Profile
 from app.schemas.discovery import DiscoveryCriteria
 from app.services.job_discovery.agent import discover_job_candidates
-from app.services.job_discovery.candidates import merge_candidates
+from app.services.job_discovery.candidates import known_urls_from_existing, merge_candidates
 from app.services.job_discovery.intervals import compute_next_run_at
 from app.services.llm.base import LLMConfigurationError, LLMError
 from app.services.search.base import SearchError
@@ -51,7 +51,13 @@ async def run_discovery(discovery_id: UUID) -> None:
 
         try:
             criteria = DiscoveryCriteria.model_validate(discovery.criteria)
-            incoming = await discover_job_candidates(db, profile, criteria)
+            existing_urls = known_urls_from_existing(discovery.candidates or [])
+            incoming = await discover_job_candidates(
+                db,
+                profile,
+                criteria,
+                existing_urls=existing_urls,
+            )
             completed_at = datetime.now(UTC)
             discovery.candidates = merge_candidates(discovery.candidates or [], incoming)
             discovery.status = "completed"
@@ -68,10 +74,11 @@ async def run_discovery(discovery_id: UUID) -> None:
                 else None
             )
             logger.info(
-                "Discovery completed: id=%s profile=%s candidates=%s",
+                "Discovery completed: id=%s profile=%s new_candidates=%s total=%s",
                 discovery_id,
                 profile.id,
                 len(incoming),
+                len(discovery.candidates or []),
             )
         except (LLMConfigurationError, LLMError, SearchError) as exc:
             discovery.status = "failed"

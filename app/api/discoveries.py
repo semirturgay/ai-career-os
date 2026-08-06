@@ -118,11 +118,18 @@ async def update_discovery(
 async def run_discovery_now(
     background_tasks: BackgroundTasks,
     discovery: JobDiscovery = Depends(get_discovery_or_404),
+    db: AsyncSession = Depends(get_db),
 ):
-    if discovery.status == "running":
+    if discovery.status in ("running", "pending"):
         return discovery_to_read(discovery)
 
+    discovery.status = "pending"
+    discovery.error = None
+    await db.commit()
+    await db.refresh(discovery)
+
     background_tasks.add_task(run_discovery, discovery.id)
+    logger.info("Manual run queued for discovery %s", discovery.id)
     return discovery_to_read(discovery)
 
 

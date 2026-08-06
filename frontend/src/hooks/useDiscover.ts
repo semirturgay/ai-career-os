@@ -182,14 +182,19 @@ export function useDiscovery(profileId: string, discoveryId: string | undefined)
       return null;
     }
     setActionLoading(true);
+    setMonitor((prev) => (prev ? { ...prev, status: "pending", error: null } : prev));
     try {
       const updated = await runDiscoveryNow(profileId, discoveryId);
       setMonitor(updated);
       return updated;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to run discovery");
+      await refresh();
+      return null;
     } finally {
       setActionLoading(false);
     }
-  }, [profileId, discoveryId]);
+  }, [profileId, discoveryId, refresh]);
 
   return {
     monitor,

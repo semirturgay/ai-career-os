@@ -70,6 +70,47 @@ def build_seed_queries(criteria: DiscoveryCriteria) -> list[str]:
     return unique[:5]
 
 
+def build_refresh_queries(criteria: DiscoveryCriteria) -> list[str]:
+    """Alternate phrasing for follow-up runs when seed queries repeat prior results."""
+    title = simplify_title(criteria.title)
+    location = _location_phrase(criteria)
+    seed_keys = {query.casefold() for query in build_seed_queries(criteria)}
+    queries: list[str] = []
+
+    if location:
+        queries.extend(
+            [
+                _clip(f"{title} vacancies {location}"),
+                _clip(f"{title} openings {location}"),
+                _clip(f"{title} job posting {location}"),
+                _clip(f"software engineer hiring {location}"),
+                _clip(f"developer jobs {location}"),
+            ]
+        )
+    else:
+        queries.extend(
+            [
+                _clip(f"{title} vacancies"),
+                _clip(f"{title} openings"),
+                _clip(f"{title} job posting"),
+                _clip("software engineer hiring"),
+            ]
+        )
+
+    if criteria.remote == "remote" and location:
+        queries.append(_clip(f"remote software engineer {location}"))
+
+    seen: set[str] = set()
+    unique: list[str] = []
+    for query in queries:
+        key = query.casefold()
+        if key in seen or key in seed_keys:
+            continue
+        seen.add(key)
+        unique.append(query)
+    return unique[:5]
+
+
 def _clip(query: str) -> str:
     query = " ".join(query.split())
     if len(query) <= MAX_QUERY_CHARS:

@@ -4,9 +4,13 @@ from app.models import Profile
 from app.prompts import load_prompt
 from app.schemas.company_research import SearchResult
 from app.schemas.discovery import DiscoveryAgentStep, DiscoveryCriteria, DiscoverySynthesisResult
-from app.services.job_discovery.candidates import picks_to_candidates
+from app.services.job_discovery.candidates import (
+    fallback_candidates_from_results,
+    normalize_discovery_url,
+    picks_to_candidates,
+)
 from app.services.job_discovery.filters import filter_job_listings
-from app.services.job_discovery.queries import build_seed_queries
+from app.services.job_discovery.queries import build_refresh_queries, build_seed_queries
 from app.services.llm import Message, get_llm_client
 from app.services.match.formatters import format_profile
 from app.services.search import SearchClient, get_search_client
@@ -82,26 +86,53 @@ def build_discovery_synthesize_user_message(
     profile: Profile,
     criteria: DiscoveryCriteria,
     search_results: list[SearchResult],
+    *,
+    known_urls: frozenset[str] | None = None,
 ) -> str:
-    return "\n\n".join(
-        [
-            f"Candidate profile:\n\n{format_profile(profile)}",
-            f"Discovery criteria:\n\n{_format_criteria(criteria)}",
-            f"Web search results:\n\n{_format_search_results(search_results)}",
-        ]
+    known = known_urls or frozenset()
+    skip_block = ""
+    if known:
+        skip_block = "Already saved URLs (prefer NEW listings not in this set):\n" + "\n".join(
+            f"- {url}" for url in sorted(known)[:40]
+        )
+
+    parts = [
+        f"Candidate profile:\n\n{format_profile(profile)}",
+        f"Discovery criteria:\n\n{_format_criteria(criteria)}",
+        f"Web search results:\n\n{_format_search_results(search_results)}",
+    ]
+    if skip_block:
+        parts.append(skip_block)
+    parts.append(
+        "Pick the best NEW job postings when possible. "
+        "If every result is already saved, return an empty candidates list."
     )
+    return "\n\n".join(parts)
 
 
 def _dedupe_search_results(results: list[SearchResult]) -> list[SearchResult]:
     seen_urls: set[str] = set()
     unique: list[SearchResult] = []
     for result in results:
-        key = result.url.casefold()
+        key = normalize_discovery_url(result.url)
         if key in seen_urls:
             continue
         seen_urls.add(key)
         unique.append(result)
     return unique
+
+
+def _novel_results(
+    results: list[SearchResult],
+    known_urls: frozenset[str],
+) -> list[SearchResult]:
+    if not known_urls:
+        return results
+    return [result for result in results if normalize_discovery_url(result.url) not in known_urls]
+
+
+def _count_novel_results(results: list[SearchResult], known_urls: frozenset[str]) -> int:
+    return len(_novel_results(results, known_urls))
 
 
 async def _search_and_collect(
@@ -129,19 +160,38 @@ async def _run_seed_searches(
     return collected
 
 
+async def _run_refresh_searches(
+    search_client: SearchClient,
+    criteria: DiscoveryCriteria,
+    collected: list[SearchResult],
+    *,
+    known_urls: frozenset[str],
+) -> list[SearchResult]:
+    for query in build_refresh_queries(criteria):
+        collected = await _search_and_collect(search_client, query, collected)
+        if _count_novel_results(collected, known_urls) >= TARGET_CANDIDATE_POOL:
+            break
+    return collected
+
+
 async def _run_agent_search_loop(
     llm,
     search_client: SearchClient,
     profile: Profile,
     criteria: DiscoveryCriteria,
     collected: list[SearchResult],
+    *,
+    known_urls: frozenset[str] | None = None,
 ) -> list[SearchResult]:
+    known = known_urls or frozenset()
     searches_done = 0
     queries_seen: set[str] = set()
     empty_streak = 0
 
     for step in range(1, DISCOVERY_MAX_AGENT_STEPS + 1):
         if len(collected) >= TARGET_CANDIDATE_POOL:
+            break
+        if known and _count_novel_results(collected, known) >= TARGET_CANDIDATE_POOL:
             break
 
         agent_step = await llm.generate_structured(
@@ -210,9 +260,12 @@ async def _synthesize_candidates(
     profile: Profile,
     criteria: DiscoveryCriteria,
     search_results: list[SearchResult],
+    *,
+    known_urls: frozenset[str] | None = None,
 ):
     from datetime import UTC, datetime
 
+    known = known_urls or frozenset()
     if not search_results:
         return []
 
@@ -221,14 +274,28 @@ async def _synthesize_candidates(
             Message(role="system", content=load_prompt("job_discovery_synthesize")),
             Message(
                 role="user",
-                content=build_discovery_synthesize_user_message(profile, criteria, search_results),
+                content=build_discovery_synthesize_user_message(
+                    profile,
+                    criteria,
+                    search_results,
+                    known_urls=known,
+                ),
             ),
         ],
         response_model=DiscoverySynthesisResult,
     )
 
     seen_at = datetime.now(UTC)
-    return picks_to_candidates(synthesis.candidates, search_results, seen_at=seen_at)
+    candidates = picks_to_candidates(synthesis.candidates, search_results, seen_at=seen_at)
+    if candidates:
+        return candidates
+
+    novel_results = _novel_results(search_results, known)
+    return fallback_candidates_from_results(
+        novel_results or search_results,
+        known_urls=known,
+        seen_at=seen_at,
+    )
 
 
 async def discover_job_candidates(
@@ -237,12 +304,40 @@ async def discover_job_candidates(
     criteria: DiscoveryCriteria,
     *,
     search_client: SearchClient | None = None,
+    existing_urls: frozenset[str] | None = None,
 ) -> list[dict]:
+    known = existing_urls or frozenset()
     llm = await get_llm_client(db)
     client = search_client or await get_search_client(db)
 
     collected = await _run_seed_searches(client, criteria)
-    if len(collected) < 3:
-        collected = await _run_agent_search_loop(llm, client, profile, criteria, collected)
 
-    return await _synthesize_candidates(llm, profile, criteria, collected)
+    if known and _count_novel_results(collected, known) < 3:
+        collected = await _run_refresh_searches(client, criteria, collected, known_urls=known)
+
+    if len(collected) < 3 or (known and _count_novel_results(collected, known) < 3):
+        collected = await _run_agent_search_loop(
+            llm,
+            client,
+            profile,
+            criteria,
+            collected,
+            known_urls=known,
+        )
+
+    synthesis_pool = _novel_results(collected, known)
+    if len(synthesis_pool) < 3:
+        synthesis_pool = collected
+
+    candidates = await _synthesize_candidates(
+        llm,
+        profile,
+        criteria,
+        synthesis_pool,
+        known_urls=known,
+    )
+    return [
+        candidate
+        for candidate in candidates
+        if normalize_discovery_url(candidate["url"]) not in known
+    ]
