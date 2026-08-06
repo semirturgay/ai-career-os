@@ -1,8 +1,9 @@
 from pydantic import BaseModel, Field, field_validator
 
+from app.schemas.discovery import DiscoveryDefaultInterval
 from app.schemas.providers import LLMProvider
 
-__all__ = ["LLMProvider", "SettingsRead", "SettingsUpdate"]
+__all__ = ["LLMProvider", "SettingsRead", "SettingsUpdate", "DiscoveryDefaultInterval"]
 
 
 class SettingsRead(BaseModel):
@@ -11,6 +12,7 @@ class SettingsRead(BaseModel):
     llm_base_url: str | None
     api_key_set: bool
     configured: bool
+    discovery_default_interval: DiscoveryDefaultInterval = "weekly"
 
 
 class SettingsUpdate(BaseModel):

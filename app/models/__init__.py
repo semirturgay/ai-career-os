@@ -34,6 +34,10 @@ class Profile(Base):
         back_populates="profile",
         cascade="all, delete-orphan",
     )
+    job_discoveries: Mapped[list["JobDiscovery"]] = relationship(
+        back_populates="profile",
+        cascade="all, delete-orphan",
+    )
     chunk_embeddings: Mapped[list["ResumeChunkEmbedding"]] = relationship(
         back_populates="profile",
         cascade="all, delete-orphan",
@@ -126,6 +130,30 @@ class MatchAnalysis(Base):
     job: Mapped["Job"] = relationship(back_populates="match_analyses")
 
 
+class JobDiscovery(Base):
+    """Scheduled job discovery monitor for a profile."""
+
+    __tablename__ = "job_discoveries"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    profile_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("profiles.id"), index=True)
+    criteria: Mapped[dict] = mapped_column(JSONB)
+    interval: Mapped[str] = mapped_column(String(20), default="default")
+    enabled: Mapped[bool] = mapped_column(default=True)
+    status: Mapped[str] = mapped_column(String(20), default="pending", index=True)
+    candidates: Mapped[list] = mapped_column(JSONB, default=list)
+    error: Mapped[str | None] = mapped_column(Text)
+    last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    next_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    last_viewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    profile: Mapped["Profile"] = relationship(back_populates="job_discoveries")
+
+
 class AppSettings(Base):
     """Singleton row for local app configuration (LLM provider, API keys).
 
@@ -139,6 +167,7 @@ class AppSettings(Base):
     llm_model: Mapped[str | None] = mapped_column(String(100))
     llm_api_key: Mapped[str | None] = mapped_column(Text)
     llm_base_url: Mapped[str | None] = mapped_column(String(500))
+    discovery_default_interval: Mapped[str] = mapped_column(String(20), default="weekly")
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -152,6 +181,7 @@ __all__ = [
     "CareerMemory",
     "FeedbackEvent",
     "Job",
+    "JobDiscovery",
     "MatchAnalysis",
     "Profile",
     "ResumeChunkEmbedding",

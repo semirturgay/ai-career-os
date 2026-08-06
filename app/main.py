@@ -1,8 +1,11 @@
+import asyncio
+import contextlib
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.discoveries import router as discoveries_router
 from app.api.exception_handlers import register_exception_handlers
 from app.api.feedback import router as feedback_router
 from app.api.jobs import router as jobs_router
@@ -20,6 +23,7 @@ from app.logging_config import (
 )
 from app.services.document_classifier.tuning_log import log_classifier_tuning_log_location
 from app.services.http_client import close_http_client, init_http_client
+from app.services.job_discovery.orchestrator import discovery_scheduler_loop
 
 setup_logging()
 logger = get_logger(__name__)
@@ -30,7 +34,11 @@ async def lifespan(app: FastAPI):
     logger.info("Starting %s", settings.app_name)
     log_classifier_tuning_log_location()
     await init_http_client()
+    scheduler_task = asyncio.create_task(discovery_scheduler_loop())
     yield
+    scheduler_task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await scheduler_task
     logger.info("Shutting down — disposing DB engine and HTTP client")
     await close_http_client()
     await engine.dispose()
@@ -53,6 +61,7 @@ app.include_router(match_analyses_router, prefix="/api/v1")
 app.include_router(feedback_router, prefix="/api/v1")
 app.include_router(settings_router, prefix="/api/v1")
 app.include_router(llm_router, prefix="/api/v1")
+app.include_router(discoveries_router, prefix="/api/v1")
 
 
 @app.get("/health")

@@ -19,8 +19,8 @@ import type {
   JobDiscoveryCandidate,
 } from "../types/discovery";
 
-/** UI-only until backend discovery endpoints ship. Set false when API is live. */
-export const DISCOVERY_LOCAL_MODE = true;
+/** Use backend API for discoveries. Set true only for offline UI preview. */
+export const DISCOVERY_LOCAL_MODE = false;
 
 function nowIso(): string {
   return new Date().toISOString();

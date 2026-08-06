@@ -10,8 +10,13 @@ import {
   subscribeDiscoveryMonitors,
   updateDiscoveryMonitor,
 } from "../lib/discoveryService";
-import { loadDiscoveryDefaultInterval } from "../lib/discoverySettings";
+import { loadDiscoveryDefaultInterval, fetchDiscoveryDefaultInterval } from "../lib/discoverySettings";
 import type { DiscoveryCreate, DiscoveryUpdate, JobDiscovery } from "../types/discovery";
+import { usePolling } from "./usePolling";
+
+function isDiscoveryActive(monitor: JobDiscovery | null | undefined): boolean {
+  return monitor?.status === "running" || monitor?.status === "pending";
+}
 
 export function useDiscoveryMonitors(profileId: string) {
   const [monitors, setMonitors] = useState<JobDiscovery[]>([]);
@@ -22,9 +27,12 @@ export function useDiscoveryMonitors(profileId: string) {
 
   const refresh = useCallback(async () => {
     try {
-      const next = await listDiscoveryMonitors(profileId);
+      const [next, interval] = await Promise.all([
+        listDiscoveryMonitors(profileId),
+        fetchDiscoveryDefaultInterval(),
+      ]);
       setMonitors(next);
-      setDefaultInterval(loadDiscoveryDefaultInterval());
+      setDefaultInterval(interval);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load discoveries");
@@ -40,6 +48,13 @@ export function useDiscoveryMonitors(profileId: string) {
       void refresh();
     });
   }, [profileId, refresh]);
+
+  const activeCount = useMemo(
+    () => monitors.filter((monitor) => monitor.status === "running" || monitor.status === "pending").length,
+    [monitors],
+  );
+
+  usePolling(() => refresh(), activeCount > 0, 2000);
 
   const createMonitor = useCallback(
     async (input: DiscoveryCreate) => {
@@ -66,11 +81,6 @@ export function useDiscoveryMonitors(profileId: string) {
       await refresh();
     },
     [profileId, refresh],
-  );
-
-  const activeCount = useMemo(
-    () => monitors.filter((monitor) => monitor.status === "running" || monitor.status === "pending").length,
-    [monitors],
   );
 
   return {
@@ -104,9 +114,12 @@ export function useDiscovery(profileId: string, discoveryId: string | undefined)
     }
 
     try {
-      const next = await getDiscoveryById(profileId, discoveryId);
+      const [next, interval] = await Promise.all([
+        getDiscoveryById(profileId, discoveryId),
+        fetchDiscoveryDefaultInterval(),
+      ]);
       setMonitor(next);
-      setDefaultInterval(loadDiscoveryDefaultInterval());
+      setDefaultInterval(interval);
       setError(next ? null : "Discovery not found");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load discovery");
@@ -125,6 +138,8 @@ export function useDiscovery(profileId: string, discoveryId: string | undefined)
       void refresh();
     });
   }, [profileId, discoveryId, refresh]);
+
+  usePolling(() => refresh(), isDiscoveryActive(monitor), 2000);
 
   useEffect(() => {
     if (!discoveryId) {

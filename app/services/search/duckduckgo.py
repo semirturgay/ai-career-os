@@ -8,6 +8,7 @@ from app.services.search.base import SearchError
 from app.services.search.tracing import ToolCallTrace, log_tool_call
 
 PROVIDER = "duckduckgo"
+SEARCH_BACKENDS = ("html", "lite", "auto")
 
 
 class DuckDuckGoSearchClient:
@@ -15,7 +16,7 @@ class DuckDuckGoSearchClient:
         started = time.perf_counter()
         try:
             raw = await asyncio.to_thread(_search_sync, query, max_results)
-            results = [_to_search_result(item) for item in raw]
+            results = _to_search_results(raw)
             log_tool_call(
                 ToolCallTrace(
                     operation="web_search",
@@ -43,8 +44,27 @@ class DuckDuckGoSearchClient:
 
 
 def _search_sync(query: str, max_results: int) -> list[dict]:
-    with DDGS() as ddgs:
-        return list(ddgs.text(query, max_results=max_results))
+    last_error: Exception | None = None
+    for backend in SEARCH_BACKENDS:
+        try:
+            with DDGS() as ddgs:
+                raw = list(
+                    ddgs.text(
+                        query,
+                        max_results=max_results,
+                        backend=backend,
+                        safesearch="moderate",
+                        timelimit="m",
+                    )
+                )
+            if raw:
+                return raw
+        except Exception as exc:
+            last_error = exc
+            continue
+    if last_error:
+        raise last_error
+    return []
 
 
 def _to_search_result(item: dict) -> SearchResult:
@@ -54,3 +74,13 @@ def _to_search_result(item: dict) -> SearchResult:
     if not title or not url:
         raise SearchError("DuckDuckGo returned a result missing title or URL")
     return SearchResult(title=title[:500], url=url[:2048], snippet=snippet[:2000])
+
+
+def _to_search_results(raw: list[dict]) -> list[SearchResult]:
+    results: list[SearchResult] = []
+    for item in raw:
+        try:
+            results.append(_to_search_result(item))
+        except SearchError:
+            continue
+    return results

@@ -155,9 +155,10 @@ export function DiscoverRunPage() {
           <AiLoadingState variant="job-discovery" size={embedded ? "sm" : "md"} />
         ) : visibleCandidates.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border bg-surface-raised px-5 py-8 text-center">
-            <p className="text-sm font-medium text-text">No candidates yet</p>
+            <p className="text-sm font-medium text-text">No candidates found</p>
             <p className="mt-1 text-sm text-text-muted">
-              Try another title, location, or interval — or run a manual search now.
+              Web search returned no usable listings for this run. Try broader title/location, a
+              different work mode, or Run now again — ATS boards (Greenhouse, Lever) work best.
             </p>
             <button
               type="button"

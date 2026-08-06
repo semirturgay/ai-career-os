@@ -1,18 +1,26 @@
 import { useEffect, useState } from "react";
-import { DISCOVERY_DEFAULT_INTERVAL_OPTIONS, type DiscoveryDefaultInterval } from "../types/discovery";
 import {
-  loadDiscoveryDefaultInterval,
+  DISCOVERY_DEFAULT_INTERVAL_OPTIONS,
+  type DiscoveryDefaultInterval,
+} from "../types/discovery";
+import {
+  fetchDiscoveryDefaultInterval,
   setDiscoveryDefaultInterval,
   subscribeDiscoveryDefaultInterval,
 } from "../lib/discoverySettings";
 import { Field, Select } from "./ui";
 
 export function DiscoverDefaultIntervalSetting() {
-  const [interval, setInterval] = useState<DiscoveryDefaultInterval>(loadDiscoveryDefaultInterval);
+  const [interval, setInterval] = useState<DiscoveryDefaultInterval>("weekly");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    void fetchDiscoveryDefaultInterval()
+      .then(setInterval)
+      .finally(() => setLoading(false));
+
     return subscribeDiscoveryDefaultInterval(() => {
-      setInterval(loadDiscoveryDefaultInterval());
+      void fetchDiscoveryDefaultInterval().then(setInterval);
     });
   }, []);
 
@@ -30,10 +38,11 @@ export function DiscoverDefaultIntervalSetting() {
         <Field label="Default interval">
           <Select
             value={interval}
+            disabled={loading}
             onChange={(event) => {
               const next = event.target.value as DiscoveryDefaultInterval;
               setInterval(next);
-              setDiscoveryDefaultInterval(next);
+              void setDiscoveryDefaultInterval(next);
             }}
           >
             {DISCOVERY_DEFAULT_INTERVAL_OPTIONS.map((option) => (
