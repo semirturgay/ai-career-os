@@ -21,3 +21,8 @@ frontend/src/types/api.generated.ts
 
 # Bundled React app for the Chrome extension (`bun run build:extension`)
 extension/app/
+
+# graphify local/runtime artifacts (commit graph.html, graph.json, GRAPH_REPORT.md)
+graphify-out/cost.json
+graphify-out/.graphify_python
+graphify-out/cache/
