@@ -3,6 +3,8 @@ import { CaptureSuctionOverlay } from "./components/CaptureSuctionOverlay";
 import { ExtensionBootstrap, ExtensionRouteSync } from "./components/ExtensionBootstrap";
 import { RequireProfileLayout } from "./components/RequireProfileLayout";
 import { AiProviderPage } from "./pages/AiProviderPage";
+import { DiscoverPage } from "./pages/DiscoverPage";
+import { DiscoverRunPage } from "./pages/DiscoverRunPage";
 import { HomePage } from "./pages/HomePage";
 import { JobDetailPage } from "./pages/JobDetailPage";
 import { JobNewPage } from "./pages/JobNewPage";
@@ -31,6 +33,8 @@ export default function App() {
 
           <Route element={<RequireProfileLayout />}>
             <Route path="/" element={<HomePage />} />
+            <Route path="/discover" element={<DiscoverPage />} />
+            <Route path="/discover/:runId" element={<DiscoverRunPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/jobs/new" element={<JobNewPage />} />
             <Route path="/jobs/new/review" element={<JobReviewPage />} />

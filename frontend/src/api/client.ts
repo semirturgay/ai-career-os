@@ -1,4 +1,5 @@
 import type { ApplicationOutcomeStatus, CompanyBrief, CoverLetterResult, FeedbackEvent, FeedbackEventCreate, Job, JobCreate, JobCreateResponse, JobIntakeHandoff, JobParseResult, MatchAnalysis, Profile, ProfileCreate, ResumeOptimizationResult, ResumeParseResult, ResumeSuggestion } from "../types";
+import type { DiscoveryCriteria, JobDiscoveryRun } from "../types/discovery";
 import type { AppSettings, ListModelsRequest, ModelListResponse, SettingsUpdate } from "../types/settings";
 import { getApiBase } from "../lib/extensionRuntime";
 import {
@@ -206,6 +207,27 @@ export const api = {
       request<ModelListResponse>("/llm/models", {
         method: "POST",
         body: JSON.stringify(data),
+      }),
+  },
+
+  discover: {
+    listRuns: (profileId: string) =>
+      request<JobDiscoveryRun[]>(`/profiles/${profileId}/discovery-runs`),
+    getRun: (profileId: string, runId: string) =>
+      request<JobDiscoveryRun>(`/profiles/${profileId}/discovery-runs/${runId}`),
+    startRun: (profileId: string, criteria: DiscoveryCriteria) =>
+      request<JobDiscoveryRun>(`/profiles/${profileId}/discovery-runs`, {
+        method: "POST",
+        body: JSON.stringify(criteria),
+      }),
+    dismissCandidate: (profileId: string, runId: string, candidateId: string) =>
+      request<JobDiscoveryRun>(
+        `/profiles/${profileId}/discovery-runs/${runId}/candidates/${candidateId}/dismiss`,
+        { method: "POST" },
+      ),
+    deleteRun: (profileId: string, runId: string) =>
+      request<void>(`/profiles/${profileId}/discovery-runs/${runId}`, {
+        method: "DELETE",
       }),
   },
 };

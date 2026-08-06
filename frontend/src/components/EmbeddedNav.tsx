@@ -1,5 +1,15 @@
 import { NavLink } from "react-router-dom";
 
+const discoverIcon = (
+  <svg viewBox="0 0 20 20" fill="currentColor" className="size-5">
+    <path
+      fillRule="evenodd"
+      d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+      clipRule="evenodd"
+    />
+  </svg>
+);
+
 const items = [
   {
     to: "/",
@@ -10,6 +20,11 @@ const items = [
         <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
       </svg>
     ),
+  },
+  {
+    to: "/discover",
+    label: "Discover",
+    icon: discoverIcon,
   },
   {
     to: "/profile",

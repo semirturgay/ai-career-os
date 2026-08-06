@@ -3,6 +3,7 @@ export type AiLoadingVariant =
   | "resume-extract"
   | "job-extract"
   | "company-research"
+  | "job-discovery"
   | "cover-letter"
   | "resume-optimize"
   | "page"
@@ -57,6 +58,16 @@ export const LOADING_CONFIG: Record<AiLoadingVariant, LoadingConfig> = {
       "Synthesizing brief — sources only, no guesses…",
     ],
     steps: [{ label: "Search" }, { label: "Refine" }, { label: "Brief" }],
+  },
+  "job-discovery": {
+    title: "Searching for jobs",
+    messages: [
+      "Building search queries from your criteria…",
+      "Scanning job boards and career pages…",
+      "Filtering listing pages from blog posts…",
+      "Ranking candidates by profile fit…",
+    ],
+    steps: [{ label: "Query" }, { label: "Search" }, { label: "Rank" }],
   },
   "cover-letter": {
     title: "Writing cover note",
