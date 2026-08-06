@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 
 from app.schemas.discovery import DiscoveryCriteria
+from app.services.job_discovery.job_search import JobSearchRequest
 
 MAX_QUERY_CHARS = 90
 
@@ -116,3 +117,183 @@ def _clip(query: str) -> str:
     if len(query) <= MAX_QUERY_CHARS:
         return query
     return query[: MAX_QUERY_CHARS - 1].rsplit(" ", 1)[0]
+
+
+_COUNTRY_TO_ISO: dict[str, str] = {
+    "turkey": "TR",
+    "türkiye": "TR",
+    "germany": "DE",
+    "india": "IN",
+    "united states": "US",
+    "usa": "US",
+    "us": "US",
+    "united kingdom": "GB",
+    "uk": "GB",
+    "canada": "CA",
+    "france": "FR",
+    "netherlands": "NL",
+    "spain": "ES",
+    "italy": "IT",
+    "poland": "PL",
+    "portugal": "PT",
+    "ireland": "IE",
+    "australia": "AU",
+    "singapore": "SG",
+}
+
+
+def resolve_country_code(country: str | None) -> str | None:
+    if not country:
+        return None
+    cleaned = country.strip()
+    if len(cleaned) == 2 and cleaned.isalpha():
+        return cleaned.upper()
+    return _COUNTRY_TO_ISO.get(cleaned.casefold())
+
+
+def _base_jsearch_request(criteria: DiscoveryCriteria, *, date_posted: str) -> JobSearchRequest:
+    return JobSearchRequest(
+        query=simplify_title(criteria.title),
+        country=resolve_country_code(criteria.country),
+        date_posted=date_posted,
+        remote_only=criteria.remote == "remote",
+    )
+
+
+def build_jsearch_seed_requests(criteria: DiscoveryCriteria) -> list[JobSearchRequest]:
+    """Primary JSearch queries for a discovery monitor."""
+    title = simplify_title(criteria.title)
+    country = resolve_country_code(criteria.country)
+    remote_only = criteria.remote == "remote"
+    location = _location_phrase(criteria)
+    primary_query = _clip(f"{title} in {location}") if location else title
+
+    requests: list[JobSearchRequest] = [
+        JobSearchRequest(
+            query=primary_query,
+            country=country,
+            date_posted="week",
+            remote_only=remote_only,
+        )
+    ]
+
+    if criteria.city and primary_query != title:
+        requests.append(
+            JobSearchRequest(
+                query=title,
+                country=country,
+                date_posted="week",
+                remote_only=remote_only,
+            )
+        )
+
+    notes = (criteria.notes or "").strip()
+    if notes:
+        keyword = " ".join(notes.split(",")[0].strip().split()[:2])
+        if keyword and len(keyword) <= 24:
+            requests.append(
+                JobSearchRequest(
+                    query=_clip(f"{title} {keyword}"),
+                    country=country,
+                    date_posted="week",
+                    remote_only=remote_only,
+                )
+            )
+
+    if remote_only and country:
+        requests.append(
+            JobSearchRequest(
+                query=_clip(f"remote {title}"),
+                country=country,
+                date_posted="week",
+                remote_only=True,
+            )
+        )
+
+    return _dedupe_requests(requests)[:4]
+
+
+def build_jsearch_broad_fallback_requests(criteria: DiscoveryCriteria) -> list[JobSearchRequest]:
+    """When country-scoped JSearch returns nothing, retry without country filter."""
+    title = simplify_title(criteria.title)
+    location = _location_phrase(criteria)
+    query = _clip(f"{title} {location}".strip()) if location else title
+    return [
+        JobSearchRequest(
+            query=query,
+            country=None,
+            date_posted="month",
+            remote_only=criteria.remote == "remote",
+        )
+    ]
+
+
+def build_jsearch_refresh_requests(criteria: DiscoveryCriteria) -> list[JobSearchRequest]:
+    """Broader follow-up queries when seed results repeat known URLs."""
+    title = simplify_title(criteria.title)
+    country = resolve_country_code(criteria.country)
+    remote_only = criteria.remote == "remote"
+    seed_keys = {_request_key(request) for request in build_jsearch_seed_requests(criteria)}
+    requests: list[JobSearchRequest] = [
+        JobSearchRequest(
+            query=_clip(f"{title} software engineer"),
+            country=country,
+            date_posted="month",
+            remote_only=remote_only,
+        ),
+        JobSearchRequest(
+            query=_clip(f"{title} developer"),
+            country=country,
+            date_posted="month",
+            remote_only=remote_only,
+        ),
+    ]
+
+    if criteria.city:
+        requests.append(
+            JobSearchRequest(
+                query=_clip(f"software engineer {criteria.city}"),
+                country=country,
+                date_posted="month",
+                remote_only=remote_only,
+            )
+        )
+
+    unique: list[JobSearchRequest] = []
+    for request in requests:
+        key = _request_key(request)
+        if key not in seed_keys:
+            unique.append(request)
+    return unique[:3]
+
+
+def jsearch_request_from_query(criteria: DiscoveryCriteria, query: str) -> JobSearchRequest:
+    return JobSearchRequest(
+        query=_clip(query),
+        country=resolve_country_code(criteria.country),
+        date_posted="week",
+        remote_only=criteria.remote == "remote",
+    )
+
+
+def _request_key(request: JobSearchRequest) -> str:
+    return "|".join(
+        [
+            request.query.casefold(),
+            (request.country or "").casefold(),
+            request.date_posted,
+            "remote" if request.remote_only else "any",
+        ]
+    )
+
+
+def _dedupe_requests(requests: list[JobSearchRequest]) -> list[JobSearchRequest]:
+    seen: set[str] = set()
+    unique: list[JobSearchRequest] = []
+    for request in requests:
+        key = _request_key(request)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(request)
+    return unique

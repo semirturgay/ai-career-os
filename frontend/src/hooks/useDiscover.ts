@@ -186,6 +186,7 @@ export function useDiscovery(profileId: string, discoveryId: string | undefined)
     try {
       const updated = await runDiscoveryNow(profileId, discoveryId);
       setMonitor(updated);
+      void refresh();
       return updated;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to run discovery");

@@ -46,5 +46,8 @@ class Settings(BaseSettings):
     azure_openai_api_key: str | None = None
     nvidia_api_key: str | None = None
 
+    # JSearch on RapidAPI — required for job discovery (https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch)
+    rapidapi_key: str | None = None
+
 
 settings = Settings()

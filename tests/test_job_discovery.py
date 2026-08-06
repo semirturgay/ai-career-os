@@ -18,8 +18,10 @@ from app.services.job_discovery.candidates import (
     picks_to_candidates,
 )
 from app.services.job_discovery.queries import (
+    build_jsearch_seed_requests,
     build_refresh_queries,
     build_seed_queries,
+    resolve_country_code,
     simplify_title,
 )
 
@@ -70,7 +72,7 @@ async def test_discover_job_candidates_runs_seeds_and_synthesizes():
             db=AsyncMock(),
             profile=profile,
             criteria=criteria,
-            search_client=mock_search,
+            job_search_client=mock_search,
         )
 
     assert len(candidates) == 1
@@ -191,14 +193,14 @@ async def test_discover_job_candidates_falls_back_when_synthesis_empty():
             db=AsyncMock(),
             profile=profile,
             criteria=criteria,
-            search_client=mock_search,
+            job_search_client=mock_search,
         )
 
     assert len(candidates) == 3
 
 
 @pytest.mark.asyncio
-async def test_discover_job_candidates_skips_known_urls_on_rerun():
+async def test_discover_job_candidates_returns_fallback_on_rerun():
     profile = SimpleNamespace(
         structured_data={"name": "Alex", "skills": ["Python"]},
         resume_text="Backend engineer.",
@@ -234,12 +236,14 @@ async def test_discover_job_candidates_skips_known_urls_on_rerun():
             db=AsyncMock(),
             profile=profile,
             criteria=criteria,
-            search_client=mock_search,
+            job_search_client=mock_search,
             existing_urls=frozenset({"https://boards.greenhouse.io/acme/jobs/1"}),
         )
 
-    assert len(candidates) == 1
-    assert candidates[0]["url"] == search_results[1].url
+    assert len(candidates) == 2
+    urls = {candidate["url"] for candidate in candidates}
+    assert known_url in urls
+    assert search_results[1].url in urls
 
 
 def test_build_refresh_queries_differs_from_seed_queries():
@@ -248,6 +252,32 @@ def test_build_refresh_queries_differs_from_seed_queries():
     refresh = build_refresh_queries(criteria)
     assert refresh
     assert all(query.casefold() not in seed for query in refresh)
+
+
+def test_build_jsearch_seed_requests_maps_country_and_remote():
+    criteria = DiscoveryCriteria(
+        title="Senior Software Engineer",
+        country="Turkey",
+        remote="remote",
+    )
+    requests = build_jsearch_seed_requests(criteria)
+    assert requests
+    assert "Turkey" in requests[0].query
+    assert requests[0].country == "TR"
+    assert requests[0].remote_only is True
+    assert requests[0].date_posted == "week"
+
+
+def test_extract_job_items_supports_data_and_jobs_keys():
+    from app.services.job_discovery.jsearch import _extract_job_items
+
+    assert _extract_job_items({"data": [{"job_title": "Engineer"}]}) == [{"job_title": "Engineer"}]
+    assert _extract_job_items({"jobs": [{"job_title": "Engineer"}]}) == [{"job_title": "Engineer"}]
+
+
+def test_resolve_country_code_accepts_iso():
+    assert resolve_country_code("de") == "DE"
+    assert resolve_country_code("Turkey") == "TR"
 
 
 def test_fallback_candidates_from_results_skips_known_urls():

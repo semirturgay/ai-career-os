@@ -9,11 +9,19 @@ from app.services.job_discovery.candidates import (
     normalize_discovery_url,
     picks_to_candidates,
 )
-from app.services.job_discovery.filters import filter_job_listings
-from app.services.job_discovery.queries import build_refresh_queries, build_seed_queries
+from app.services.job_discovery.job_search import (
+    JobSearchClient,
+    JobSearchRequest,
+    get_job_search_client,
+)
+from app.services.job_discovery.queries import (
+    build_jsearch_broad_fallback_requests,
+    build_jsearch_refresh_requests,
+    build_jsearch_seed_requests,
+    jsearch_request_from_query,
+)
 from app.services.llm import Message, get_llm_client
 from app.services.match.formatters import format_profile
-from app.services.search import SearchClient, get_search_client
 from app.services.search.tracing import AgentStepTrace, log_agent_step
 
 DISCOVERY_MAX_AGENT_STEPS = 3
@@ -75,7 +83,7 @@ def build_discovery_agent_user_message(
                 else "No search results yet."
             ),
             (
-                "Choose action=search with one NEW short query (max 90 chars), "
+                "Choose action=search with one NEW short job title/keyword query (max 90 chars), "
                 "or action=synthesize if you have enough job listing snippets."
             ),
         ]
@@ -99,7 +107,7 @@ def build_discovery_synthesize_user_message(
     parts = [
         f"Candidate profile:\n\n{format_profile(profile)}",
         f"Discovery criteria:\n\n{_format_criteria(criteria)}",
-        f"Web search results:\n\n{_format_search_results(search_results)}",
+        f"Job search results:\n\n{_format_search_results(search_results)}",
     ]
     if skip_block:
         parts.append(skip_block)
@@ -136,39 +144,38 @@ def _count_novel_results(results: list[SearchResult], known_urls: frozenset[str]
 
 
 async def _search_and_collect(
-    search_client: SearchClient,
-    query: str,
+    job_search_client: JobSearchClient,
+    request: JobSearchRequest,
     collected: list[SearchResult],
 ) -> list[SearchResult]:
-    batch = await search_client.search(
-        query,
+    batch = await job_search_client.search(
+        request,
         max_results=DISCOVERY_SEARCH_RESULTS_PER_QUERY,
     )
-    batch = filter_job_listings(batch)
     return _dedupe_search_results([*collected, *batch])
 
 
 async def _run_seed_searches(
-    search_client: SearchClient,
+    job_search_client: JobSearchClient,
     criteria: DiscoveryCriteria,
 ) -> list[SearchResult]:
     collected: list[SearchResult] = []
-    for query in build_seed_queries(criteria):
-        collected = await _search_and_collect(search_client, query, collected)
+    for request in build_jsearch_seed_requests(criteria):
+        collected = await _search_and_collect(job_search_client, request, collected)
         if len(collected) >= TARGET_CANDIDATE_POOL:
             break
     return collected
 
 
 async def _run_refresh_searches(
-    search_client: SearchClient,
+    job_search_client: JobSearchClient,
     criteria: DiscoveryCriteria,
     collected: list[SearchResult],
     *,
     known_urls: frozenset[str],
 ) -> list[SearchResult]:
-    for query in build_refresh_queries(criteria):
-        collected = await _search_and_collect(search_client, query, collected)
+    for request in build_jsearch_refresh_requests(criteria):
+        collected = await _search_and_collect(job_search_client, request, collected)
         if _count_novel_results(collected, known_urls) >= TARGET_CANDIDATE_POOL:
             break
     return collected
@@ -176,7 +183,7 @@ async def _run_refresh_searches(
 
 async def _run_agent_search_loop(
     llm,
-    search_client: SearchClient,
+    job_search_client: JobSearchClient,
     profile: Profile,
     criteria: DiscoveryCriteria,
     collected: list[SearchResult],
@@ -232,8 +239,7 @@ async def _run_agent_search_loop(
             break
 
         query = (agent_step.query or "").strip()
-        if not query or "site:" in query.casefold():
-            # LLM site: queries are unreliable — skip and ask again next step.
+        if not query:
             continue
 
         query_key = query.casefold()
@@ -242,7 +248,11 @@ async def _run_agent_search_loop(
         queries_seen.add(query_key)
 
         before = len(collected)
-        collected = await _search_and_collect(search_client, query, collected)
+        collected = await _search_and_collect(
+            job_search_client,
+            jsearch_request_from_query(criteria, query),
+            collected,
+        )
         if len(collected) > before:
             empty_streak = 0
         else:
@@ -290,10 +300,9 @@ async def _synthesize_candidates(
     if candidates:
         return candidates
 
-    novel_results = _novel_results(search_results, known)
     return fallback_candidates_from_results(
-        novel_results or search_results,
-        known_urls=known,
+        search_results,
+        known_urls=frozenset(),
         seen_at=seen_at,
     )
 
@@ -303,14 +312,20 @@ async def discover_job_candidates(
     profile: Profile,
     criteria: DiscoveryCriteria,
     *,
-    search_client: SearchClient | None = None,
+    job_search_client: JobSearchClient | None = None,
     existing_urls: frozenset[str] | None = None,
 ) -> list[dict]:
     known = existing_urls or frozenset()
     llm = await get_llm_client(db)
-    client = search_client or await get_search_client(db)
+    client = job_search_client or get_job_search_client()
 
     collected = await _run_seed_searches(client, criteria)
+
+    if not collected:
+        for request in build_jsearch_broad_fallback_requests(criteria):
+            collected = await _search_and_collect(client, request, collected)
+            if collected:
+                break
 
     if known and _count_novel_results(collected, known) < 3:
         collected = await _run_refresh_searches(client, criteria, collected, known_urls=known)
@@ -336,8 +351,4 @@ async def discover_job_candidates(
         synthesis_pool,
         known_urls=known,
     )
-    return [
-        candidate
-        for candidate in candidates
-        if normalize_discovery_url(candidate["url"]) not in known
-    ]
+    return candidates
