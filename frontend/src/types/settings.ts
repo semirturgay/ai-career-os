@@ -35,6 +35,8 @@ export interface AppSettings {
   llm_base_url: string | null;
   api_key_set: boolean;
   configured: boolean;
+  /** Present once backend discovery settings ship. */
+  discovery_default_interval?: import("./discovery").DiscoveryDefaultInterval | null;
 }
 
 export interface SettingsUpdate {

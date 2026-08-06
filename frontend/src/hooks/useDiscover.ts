@@ -1,27 +1,33 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  deleteDiscoveryRun,
+  createDiscoveryMonitor,
+  deleteDiscoveryMonitor,
   dismissDiscoveryCandidate,
-  getDiscoveryRunById,
-  listDiscoveryRuns,
-  startDiscoveryRun,
-  subscribeDiscoveryRuns,
+  getDiscoveryById,
+  listDiscoveryMonitors,
+  markDiscoveryViewed,
+  runDiscoveryNow,
+  subscribeDiscoveryMonitors,
+  updateDiscoveryMonitor,
 } from "../lib/discoveryService";
-import type { DiscoveryRunCreate, JobDiscoveryRun } from "../types/discovery";
+import { loadDiscoveryDefaultInterval } from "../lib/discoverySettings";
+import type { DiscoveryCreate, DiscoveryUpdate, JobDiscovery } from "../types/discovery";
 
-export function useDiscoveryRuns(profileId: string) {
-  const [runs, setRuns] = useState<JobDiscoveryRun[]>([]);
+export function useDiscoveryMonitors(profileId: string) {
+  const [monitors, setMonitors] = useState<JobDiscovery[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  const [defaultInterval, setDefaultInterval] = useState(loadDiscoveryDefaultInterval);
 
   const refresh = useCallback(async () => {
     try {
-      const next = await listDiscoveryRuns(profileId);
-      setRuns(next);
+      const next = await listDiscoveryMonitors(profileId);
+      setMonitors(next);
+      setDefaultInterval(loadDiscoveryDefaultInterval());
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load discovery runs");
+      setError(err instanceof Error ? err.message : "Failed to load discoveries");
     } finally {
       setLoading(false);
     }
@@ -30,21 +36,21 @@ export function useDiscoveryRuns(profileId: string) {
   useEffect(() => {
     setLoading(true);
     void refresh();
-    return subscribeDiscoveryRuns(profileId, () => {
+    return subscribeDiscoveryMonitors(profileId, () => {
       void refresh();
     });
   }, [profileId, refresh]);
 
-  const startRun = useCallback(
-    async (input: DiscoveryRunCreate) => {
+  const createMonitor = useCallback(
+    async (input: DiscoveryCreate) => {
       setStarting(true);
       setError(null);
       try {
-        const run = await startDiscoveryRun(profileId, input);
+        const monitor = await createDiscoveryMonitor(profileId, input);
         await refresh();
-        return run;
+        return monitor;
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Failed to start discovery";
+        const message = err instanceof Error ? err.message : "Failed to create discovery";
         setError(message);
         throw err;
       } finally {
@@ -54,82 +60,134 @@ export function useDiscoveryRuns(profileId: string) {
     [profileId, refresh],
   );
 
-  const removeRun = useCallback(
-    async (runId: string) => {
-      await deleteDiscoveryRun(profileId, runId);
+  const removeMonitor = useCallback(
+    async (discoveryId: string) => {
+      await deleteDiscoveryMonitor(profileId, discoveryId);
       await refresh();
     },
     [profileId, refresh],
   );
 
   const activeCount = useMemo(
-    () => runs.filter((run) => run.status === "running" || run.status === "pending").length,
-    [runs],
+    () => monitors.filter((monitor) => monitor.status === "running" || monitor.status === "pending").length,
+    [monitors],
   );
 
   return {
-    runs,
+    monitors,
     loading,
     error,
     starting,
     activeCount,
+    defaultInterval,
     refresh,
-    startRun,
-    removeRun,
+    createMonitor,
+    removeMonitor,
   };
 }
 
-export function useDiscoveryRun(profileId: string, runId: string | undefined) {
-  const [run, setRun] = useState<JobDiscoveryRun | null>(null);
+/** @deprecated use useDiscoveryMonitors */
+export const useDiscoveryRuns = useDiscoveryMonitors;
+
+export function useDiscovery(profileId: string, discoveryId: string | undefined) {
+  const [monitor, setMonitor] = useState<JobDiscovery | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [defaultInterval, setDefaultInterval] = useState(loadDiscoveryDefaultInterval);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const refresh = useCallback(async () => {
-    if (!runId) {
-      setRun(null);
+    if (!discoveryId) {
+      setMonitor(null);
       setLoading(false);
       return;
     }
 
     try {
-      const next = await getDiscoveryRunById(profileId, runId);
-      setRun(next);
-      setError(next ? null : "Discovery run not found");
+      const next = await getDiscoveryById(profileId, discoveryId);
+      setMonitor(next);
+      setDefaultInterval(loadDiscoveryDefaultInterval());
+      setError(next ? null : "Discovery not found");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load discovery run");
+      setError(err instanceof Error ? err.message : "Failed to load discovery");
     } finally {
       setLoading(false);
     }
-  }, [profileId, runId]);
+  }, [profileId, discoveryId]);
 
   useEffect(() => {
     setLoading(true);
     void refresh();
-    if (!runId) {
+    if (!discoveryId) {
       return;
     }
-    return subscribeDiscoveryRuns(profileId, () => {
+    return subscribeDiscoveryMonitors(profileId, () => {
       void refresh();
     });
-  }, [profileId, runId, refresh]);
+  }, [profileId, discoveryId, refresh]);
+
+  useEffect(() => {
+    if (!discoveryId) {
+      return;
+    }
+    void markDiscoveryViewed(profileId, discoveryId);
+  }, [profileId, discoveryId]);
 
   const dismissCandidate = useCallback(
     async (candidateId: string) => {
-      if (!runId) {
+      if (!discoveryId) {
         return null;
       }
-      const updated = await dismissDiscoveryCandidate(profileId, runId, candidateId);
-      setRun(updated);
+      const updated = await dismissDiscoveryCandidate(profileId, discoveryId, candidateId);
+      setMonitor(updated);
       return updated;
     },
-    [profileId, runId],
+    [profileId, discoveryId],
   );
 
+  const updateMonitor = useCallback(
+    async (patch: DiscoveryUpdate) => {
+      if (!discoveryId) {
+        return null;
+      }
+      setActionLoading(true);
+      try {
+        const updated = await updateDiscoveryMonitor(profileId, discoveryId, patch);
+        setMonitor(updated);
+        return updated;
+      } finally {
+        setActionLoading(false);
+      }
+    },
+    [profileId, discoveryId],
+  );
+
+  const runNow = useCallback(async () => {
+    if (!discoveryId) {
+      return null;
+    }
+    setActionLoading(true);
+    try {
+      const updated = await runDiscoveryNow(profileId, discoveryId);
+      setMonitor(updated);
+      return updated;
+    } finally {
+      setActionLoading(false);
+    }
+  }, [profileId, discoveryId]);
+
   return {
-    run,
+    monitor,
     loading,
     error,
+    defaultInterval,
+    actionLoading,
     refresh,
     dismissCandidate,
+    updateMonitor,
+    runNow,
   };
 }
+
+/** @deprecated use useDiscovery */
+export const useDiscoveryRun = useDiscovery;

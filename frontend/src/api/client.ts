@@ -1,5 +1,5 @@
 import type { ApplicationOutcomeStatus, CompanyBrief, CoverLetterResult, FeedbackEvent, FeedbackEventCreate, Job, JobCreate, JobCreateResponse, JobIntakeHandoff, JobParseResult, MatchAnalysis, Profile, ProfileCreate, ResumeOptimizationResult, ResumeParseResult, ResumeSuggestion } from "../types";
-import type { DiscoveryCriteria, JobDiscoveryRun } from "../types/discovery";
+import type { DiscoveryCriteria, DiscoveryDefaultInterval, DiscoveryUpdate, JobDiscovery } from "../types/discovery";
 import type { AppSettings, ListModelsRequest, ModelListResponse, SettingsUpdate } from "../types/settings";
 import { getApiBase } from "../lib/extensionRuntime";
 import {
@@ -211,24 +211,48 @@ export const api = {
   },
 
   discover: {
-    listRuns: (profileId: string) =>
-      request<JobDiscoveryRun[]>(`/profiles/${profileId}/discovery-runs`),
-    getRun: (profileId: string, runId: string) =>
-      request<JobDiscoveryRun>(`/profiles/${profileId}/discovery-runs/${runId}`),
-    startRun: (profileId: string, criteria: DiscoveryCriteria) =>
-      request<JobDiscoveryRun>(`/profiles/${profileId}/discovery-runs`, {
+    list: (profileId: string) => request<JobDiscovery[]>(`/profiles/${profileId}/discoveries`),
+    get: (profileId: string, discoveryId: string) =>
+      request<JobDiscovery>(`/profiles/${profileId}/discoveries/${discoveryId}`),
+    create: (profileId: string, criteria: DiscoveryCriteria & { interval?: string }) =>
+      request<JobDiscovery>(`/profiles/${profileId}/discoveries`, {
         method: "POST",
         body: JSON.stringify(criteria),
       }),
-    dismissCandidate: (profileId: string, runId: string, candidateId: string) =>
-      request<JobDiscoveryRun>(
-        `/profiles/${profileId}/discovery-runs/${runId}/candidates/${candidateId}/dismiss`,
+    update: (profileId: string, discoveryId: string, patch: DiscoveryUpdate) =>
+      request<JobDiscovery>(`/profiles/${profileId}/discoveries/${discoveryId}`, {
+        method: "PATCH",
+        body: JSON.stringify(patch),
+      }),
+    runNow: (profileId: string, discoveryId: string) =>
+      request<JobDiscovery>(`/profiles/${profileId}/discoveries/${discoveryId}/run`, {
+        method: "POST",
+      }),
+    markViewed: (profileId: string, discoveryId: string) =>
+      request<JobDiscovery>(`/profiles/${profileId}/discoveries/${discoveryId}/viewed`, {
+        method: "POST",
+      }),
+    dismissCandidate: (profileId: string, discoveryId: string, candidateId: string) =>
+      request<JobDiscovery>(
+        `/profiles/${profileId}/discoveries/${discoveryId}/candidates/${candidateId}/dismiss`,
         { method: "POST" },
       ),
-    deleteRun: (profileId: string, runId: string) =>
-      request<void>(`/profiles/${profileId}/discovery-runs/${runId}`, {
+    delete: (profileId: string, discoveryId: string) =>
+      request<void>(`/profiles/${profileId}/discoveries/${discoveryId}`, {
         method: "DELETE",
       }),
+    getDefaultInterval: () =>
+      request<{ discovery_default_interval: DiscoveryDefaultInterval }>(
+        "/settings/discovery-default-interval",
+      ),
+    setDefaultInterval: (interval: DiscoveryDefaultInterval) =>
+      request<{ discovery_default_interval: DiscoveryDefaultInterval }>(
+        "/settings/discovery-default-interval",
+        {
+          method: "PUT",
+          body: JSON.stringify({ discovery_default_interval: interval }),
+        },
+      ),
   },
 };
 

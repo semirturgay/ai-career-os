@@ -1,16 +1,22 @@
 import { api } from "../api/client";
 import { ApiError } from "../api/client";
 import {
-  getDiscoveryRun,
-  loadDiscoveryRuns,
-  saveDiscoveryRuns,
-  upsertDiscoveryRun,
+  addDiscoveryInterval,
+  resolveDiscoveryInterval,
+} from "./discoveryIntervals";
+import { loadDiscoveryDefaultInterval } from "./discoverySettings";
+import {
+  getDiscoveryMonitor,
+  loadDiscoveryMonitors,
+  saveDiscoveryMonitors,
+  upsertDiscoveryMonitor,
 } from "./discoveryStorage";
 import type {
+  DiscoveryCreate,
   DiscoveryCriteria,
-  DiscoveryRunCreate,
+  DiscoveryUpdate,
+  JobDiscovery,
   JobDiscoveryCandidate,
-  JobDiscoveryRun,
 } from "../types/discovery";
 
 /** UI-only until backend discovery endpoints ship. Set false when API is live. */
@@ -27,7 +33,7 @@ function createId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
-function normalizeCriteria(input: DiscoveryRunCreate): DiscoveryCriteria {
+function normalizeCriteria(input: DiscoveryCreate): DiscoveryCriteria {
   return {
     title: input.title.trim(),
     country: input.country?.trim() || null,
@@ -54,7 +60,13 @@ export function formatDiscoveryCriteria(criteria: DiscoveryCriteria): string {
   return criteriaLabel(criteria);
 }
 
-function mockCandidates(criteria: DiscoveryCriteria): JobDiscoveryCandidate[] {
+function computeNextRunAt(monitor: Pick<JobDiscovery, "interval">, from = new Date()): string {
+  const defaultInterval = loadDiscoveryDefaultInterval();
+  const resolved = resolveDiscoveryInterval(monitor, defaultInterval);
+  return addDiscoveryInterval(from, resolved).toISOString();
+}
+
+function mockCandidates(criteria: DiscoveryCriteria, seenAt: string): JobDiscoveryCandidate[] {
   const location = criteria.city ?? criteria.country ?? "your market";
   const remoteNote =
     criteria.remote === "remote"
@@ -76,6 +88,8 @@ function mockCandidates(criteria: DiscoveryCriteria): JobDiscoveryCandidate[] {
       fit_score: 82,
       fit_reason: "Title aligns closely; snippet mentions your core stack.",
       dismissed: false,
+      first_seen_at: seenAt,
+      last_seen_at: seenAt,
     },
     {
       id: createId("candidate"),
@@ -87,6 +101,8 @@ function mockCandidates(criteria: DiscoveryCriteria): JobDiscoveryCandidate[] {
       fit_score: 71,
       fit_reason: "Strong domain overlap; verify seniority on the posting.",
       dismissed: false,
+      first_seen_at: seenAt,
+      last_seen_at: seenAt,
     },
     {
       id: createId("candidate"),
@@ -98,34 +114,69 @@ function mockCandidates(criteria: DiscoveryCriteria): JobDiscoveryCandidate[] {
       fit_score: 64,
       fit_reason: "Reasonable title match; limited detail in search snippet.",
       dismissed: false,
+      first_seen_at: seenAt,
+      last_seen_at: seenAt,
     },
   ];
 }
 
+function mergeCandidates(
+  existing: JobDiscoveryCandidate[],
+  incoming: JobDiscoveryCandidate[],
+): JobDiscoveryCandidate[] {
+  const byUrl = new Map(existing.map((candidate) => [candidate.url.toLowerCase(), candidate]));
+
+  for (const candidate of incoming) {
+    const key = candidate.url.toLowerCase();
+    const prior = byUrl.get(key);
+    if (prior) {
+      byUrl.set(key, {
+        ...prior,
+        title: candidate.title,
+        company: candidate.company,
+        snippet: candidate.snippet,
+        source: candidate.source,
+        fit_score: candidate.fit_score ?? prior.fit_score,
+        fit_reason: candidate.fit_reason ?? prior.fit_reason,
+        last_seen_at: candidate.last_seen_at,
+      });
+    } else {
+      byUrl.set(key, candidate);
+    }
+  }
+
+  return Array.from(byUrl.values()).sort(
+    (a, b) => new Date(b.first_seen_at).getTime() - new Date(a.first_seen_at).getTime(),
+  );
+}
+
 const pendingSimulations = new Map<string, ReturnType<typeof setTimeout>>();
 
-function scheduleLocalSimulation(profileId: string, runId: string): void {
-  const key = `${profileId}:${runId}`;
+function scheduleLocalSimulation(profileId: string, discoveryId: string): void {
+  const key = `${profileId}:${discoveryId}`;
   if (pendingSimulations.has(key)) {
     return;
   }
 
   const timeout = setTimeout(() => {
     pendingSimulations.delete(key);
-    const current = getDiscoveryRun(profileId, runId);
+    const current = getDiscoveryMonitor(profileId, discoveryId);
     if (!current || current.status !== "running") {
       return;
     }
 
-    const completed: JobDiscoveryRun = {
+    const completedAt = nowIso();
+    const incoming = mockCandidates(current.criteria, completedAt);
+    const completed: JobDiscovery = {
       ...current,
       status: "completed",
-      candidates: mockCandidates(current.criteria),
+      candidates: mergeCandidates(current.candidates, incoming),
       error: null,
-      updated_at: nowIso(),
-      completed_at: nowIso(),
+      last_run_at: completedAt,
+      next_run_at: current.enabled ? computeNextRunAt(current, new Date(completedAt)) : null,
+      updated_at: completedAt,
     };
-    upsertDiscoveryRun(profileId, completed);
+    upsertDiscoveryMonitor(profileId, completed);
     notifyListeners(profileId);
   }, 4500);
 
@@ -138,7 +189,7 @@ function notifyListeners(profileId: string): void {
   listeners.get(profileId)?.forEach((listener) => listener());
 }
 
-export function subscribeDiscoveryRuns(profileId: string, listener: () => void): () => void {
+export function subscribeDiscoveryMonitors(profileId: string, listener: () => void): () => void {
   const set = listeners.get(profileId) ?? new Set();
   set.add(listener);
   listeners.set(profileId, set);
@@ -150,10 +201,13 @@ export function subscribeDiscoveryRuns(profileId: string, listener: () => void):
   };
 }
 
-export async function listDiscoveryRuns(profileId: string): Promise<JobDiscoveryRun[]> {
+/** @deprecated use subscribeDiscoveryMonitors */
+export const subscribeDiscoveryRuns = subscribeDiscoveryMonitors;
+
+export async function listDiscoveryMonitors(profileId: string): Promise<JobDiscovery[]> {
   if (!DISCOVERY_LOCAL_MODE) {
     try {
-      return await api.discover.listRuns(profileId);
+      return await api.discover.list(profileId);
     } catch (error) {
       if (!(error instanceof ApiError) || error.status !== 404) {
         throw error;
@@ -161,22 +215,25 @@ export async function listDiscoveryRuns(profileId: string): Promise<JobDiscovery
     }
   }
 
-  const runs = loadDiscoveryRuns(profileId);
-  for (const run of runs) {
-    if (run.status === "running") {
-      scheduleLocalSimulation(profileId, run.id);
+  const monitors = loadDiscoveryMonitors(profileId);
+  for (const monitor of monitors) {
+    if (monitor.status === "running") {
+      scheduleLocalSimulation(profileId, monitor.id);
     }
   }
-  return runs;
+  return monitors;
 }
 
-export async function getDiscoveryRunById(
+/** @deprecated use listDiscoveryMonitors */
+export const listDiscoveryRuns = listDiscoveryMonitors;
+
+export async function getDiscoveryById(
   profileId: string,
-  runId: string,
-): Promise<JobDiscoveryRun | null> {
+  discoveryId: string,
+): Promise<JobDiscovery | null> {
   if (!DISCOVERY_LOCAL_MODE) {
     try {
-      return await api.discover.getRun(profileId, runId);
+      return await api.discover.get(profileId, discoveryId);
     } catch (error) {
       if (error instanceof ApiError && error.status === 404) {
         return null;
@@ -185,79 +242,183 @@ export async function getDiscoveryRunById(
     }
   }
 
-  const run = getDiscoveryRun(profileId, runId);
-  if (run?.status === "running") {
-    scheduleLocalSimulation(profileId, run.id);
+  const monitor = getDiscoveryMonitor(profileId, discoveryId);
+  if (monitor?.status === "running") {
+    scheduleLocalSimulation(profileId, monitor.id);
   }
-  return run;
+  return monitor;
 }
 
-export async function startDiscoveryRun(
+/** @deprecated use getDiscoveryById */
+export const getDiscoveryRunById = getDiscoveryById;
+
+export async function createDiscoveryMonitor(
   profileId: string,
-  input: DiscoveryRunCreate,
-): Promise<JobDiscoveryRun> {
+  input: DiscoveryCreate,
+): Promise<JobDiscovery> {
   const criteria = normalizeCriteria(input);
   if (!criteria.title) {
     throw new Error("Job title is required");
   }
 
   if (!DISCOVERY_LOCAL_MODE) {
-    return api.discover.startRun(profileId, criteria);
+    return api.discover.create(profileId, {
+      ...criteria,
+      interval: input.interval ?? "default",
+    });
   }
 
   const timestamp = nowIso();
-  const run: JobDiscoveryRun = {
+  const monitor: JobDiscovery = {
     id: createId("discovery"),
     profile_id: profileId,
     criteria,
+    interval: input.interval ?? "default",
+    enabled: true,
     status: "running",
     candidates: [],
     error: null,
+    last_run_at: null,
+    next_run_at: null,
+    last_viewed_at: null,
     created_at: timestamp,
     updated_at: timestamp,
-    completed_at: null,
   };
 
-  upsertDiscoveryRun(profileId, run);
-  scheduleLocalSimulation(profileId, run.id);
+  upsertDiscoveryMonitor(profileId, monitor);
+  scheduleLocalSimulation(profileId, monitor.id);
   notifyListeners(profileId);
-  return run;
+  return monitor;
 }
 
-export async function dismissDiscoveryCandidate(
+/** @deprecated use createDiscoveryMonitor */
+export const startDiscoveryRun = createDiscoveryMonitor;
+
+export async function updateDiscoveryMonitor(
   profileId: string,
-  runId: string,
-  candidateId: string,
-): Promise<JobDiscoveryRun | null> {
+  discoveryId: string,
+  patch: DiscoveryUpdate,
+): Promise<JobDiscovery | null> {
   if (!DISCOVERY_LOCAL_MODE) {
-    return api.discover.dismissCandidate(profileId, runId, candidateId);
+    return api.discover.update(profileId, discoveryId, patch);
   }
 
-  const run = getDiscoveryRun(profileId, runId);
-  if (!run) {
+  const monitor = getDiscoveryMonitor(profileId, discoveryId);
+  if (!monitor) {
     return null;
   }
 
-  const updated: JobDiscoveryRun = {
-    ...run,
-    candidates: run.candidates.map((candidate) =>
-      candidate.id === candidateId ? { ...candidate, dismissed: true } : candidate,
-    ),
+  const enabled = patch.enabled ?? monitor.enabled;
+  const interval = patch.interval ?? monitor.interval;
+  const updated: JobDiscovery = {
+    ...monitor,
+    enabled,
+    interval,
+    next_run_at:
+      enabled && monitor.status !== "running"
+        ? computeNextRunAt({ interval }, new Date(monitor.last_run_at ?? Date.now()))
+        : enabled
+          ? monitor.next_run_at
+          : null,
     updated_at: nowIso(),
   };
-  upsertDiscoveryRun(profileId, updated);
+
+  upsertDiscoveryMonitor(profileId, updated);
   notifyListeners(profileId);
   return updated;
 }
 
-export async function deleteDiscoveryRun(profileId: string, runId: string): Promise<void> {
+export async function runDiscoveryNow(
+  profileId: string,
+  discoveryId: string,
+): Promise<JobDiscovery | null> {
   if (!DISCOVERY_LOCAL_MODE) {
-    await api.discover.deleteRun(profileId, runId);
+    return api.discover.runNow(profileId, discoveryId);
+  }
+
+  const monitor = getDiscoveryMonitor(profileId, discoveryId);
+  if (!monitor) {
+    return null;
+  }
+  if (monitor.status === "running") {
+    return monitor;
+  }
+
+  const updated: JobDiscovery = {
+    ...monitor,
+    status: "running",
+    error: null,
+    updated_at: nowIso(),
+  };
+  upsertDiscoveryMonitor(profileId, updated);
+  scheduleLocalSimulation(profileId, discoveryId);
+  notifyListeners(profileId);
+  return updated;
+}
+
+export async function markDiscoveryViewed(
+  profileId: string,
+  discoveryId: string,
+): Promise<JobDiscovery | null> {
+  if (!DISCOVERY_LOCAL_MODE) {
+    return api.discover.markViewed(profileId, discoveryId);
+  }
+
+  const monitor = getDiscoveryMonitor(profileId, discoveryId);
+  if (!monitor) {
+    return null;
+  }
+
+  const updated: JobDiscovery = {
+    ...monitor,
+    last_viewed_at: nowIso(),
+    updated_at: nowIso(),
+  };
+  upsertDiscoveryMonitor(profileId, updated);
+  notifyListeners(profileId);
+  return updated;
+}
+
+export async function dismissDiscoveryCandidate(
+  profileId: string,
+  discoveryId: string,
+  candidateId: string,
+): Promise<JobDiscovery | null> {
+  if (!DISCOVERY_LOCAL_MODE) {
+    return api.discover.dismissCandidate(profileId, discoveryId, candidateId);
+  }
+
+  const monitor = getDiscoveryMonitor(profileId, discoveryId);
+  if (!monitor) {
+    return null;
+  }
+
+  const updated: JobDiscovery = {
+    ...monitor,
+    candidates: monitor.candidates.map((candidate) =>
+      candidate.id === candidateId ? { ...candidate, dismissed: true } : candidate,
+    ),
+    updated_at: nowIso(),
+  };
+  upsertDiscoveryMonitor(profileId, updated);
+  notifyListeners(profileId);
+  return updated;
+}
+
+export async function deleteDiscoveryMonitor(
+  profileId: string,
+  discoveryId: string,
+): Promise<void> {
+  if (!DISCOVERY_LOCAL_MODE) {
+    await api.discover.delete(profileId, discoveryId);
     notifyListeners(profileId);
     return;
   }
 
-  const runs = loadDiscoveryRuns(profileId).filter((run) => run.id !== runId);
-  saveDiscoveryRuns(profileId, runs);
+  const monitors = loadDiscoveryMonitors(profileId).filter((monitor) => monitor.id !== discoveryId);
+  saveDiscoveryMonitors(profileId, monitors);
   notifyListeners(profileId);
 }
+
+/** @deprecated use deleteDiscoveryMonitor */
+export const deleteDiscoveryRun = deleteDiscoveryMonitor;

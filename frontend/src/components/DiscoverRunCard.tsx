@@ -1,16 +1,21 @@
 import { Link } from "react-router-dom";
-import type { JobDiscoveryRun } from "../types/discovery";
+import type { DiscoveryDefaultInterval, JobDiscovery } from "../types/discovery";
+import { countNewCandidates, formatNextRun, intervalLabel } from "../lib/discoveryIntervals";
 import { formatDiscoveryCriteria } from "../lib/discoveryService";
 import { Badge } from "./ui";
 
-interface DiscoverRunCardProps {
-  run: JobDiscoveryRun;
+interface DiscoverMonitorCardProps {
+  monitor: JobDiscovery;
+  defaultInterval: DiscoveryDefaultInterval;
   compact?: boolean;
   onDelete?: () => void;
 }
 
-function statusVariant(status: JobDiscoveryRun["status"]) {
-  switch (status) {
+function statusVariant(monitor: JobDiscovery) {
+  if (!monitor.enabled) {
+    return "warning" as const;
+  }
+  switch (monitor.status) {
     case "completed":
       return "success" as const;
     case "failed":
@@ -21,10 +26,13 @@ function statusVariant(status: JobDiscoveryRun["status"]) {
   }
 }
 
-function statusLabel(status: JobDiscoveryRun["status"]) {
-  switch (status) {
+function statusLabel(monitor: JobDiscovery) {
+  if (!monitor.enabled) {
+    return "Paused";
+  }
+  switch (monitor.status) {
     case "completed":
-      return "Done";
+      return "Active";
     case "failed":
       return "Failed";
     case "running":
@@ -34,7 +42,11 @@ function statusLabel(status: JobDiscoveryRun["status"]) {
   }
 }
 
-function formatWhen(iso: string): string {
+function formatWhen(iso: string | null | undefined): string {
+  if (!iso) {
+    return "Never";
+  }
+
   const date = new Date(iso);
   const now = new Date();
   const sameDay =
@@ -49,14 +61,20 @@ function formatWhen(iso: string): string {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-export function DiscoverRunCard({ run, compact, onDelete }: DiscoverRunCardProps) {
-  const visibleCandidates = run.candidates.filter((candidate) => !candidate.dismissed);
-  const criteriaText = formatDiscoveryCriteria(run.criteria);
+export function DiscoverMonitorCard({
+  monitor,
+  defaultInterval,
+  compact,
+  onDelete,
+}: DiscoverMonitorCardProps) {
+  const visibleCandidates = monitor.candidates.filter((candidate) => !candidate.dismissed);
+  const criteriaText = formatDiscoveryCriteria(monitor.criteria);
+  const newCount = countNewCandidates(monitor, defaultInterval);
 
   return (
     <li className="min-w-0">
       <Link
-        to={`/discover/${run.id}`}
+        to={`/discover/${monitor.id}`}
         className={`group block min-w-0 rounded-xl border border-border bg-surface-raised transition hover:border-accent/30 hover:shadow-sm ${
           compact ? "p-3" : "p-4"
         }`}
@@ -64,21 +82,22 @@ export function DiscoverRunCard({ run, compact, onDelete }: DiscoverRunCardProps
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant={statusVariant(run.status)}>{statusLabel(run.status)}</Badge>
-              <span className="text-[11px] text-text-muted">{formatWhen(run.created_at)}</span>
+              <Badge variant={statusVariant(monitor)}>{statusLabel(monitor)}</Badge>
+              <Badge variant="default">{intervalLabel(monitor.interval, defaultInterval)}</Badge>
+              {newCount > 0 && <Badge variant="info">{newCount} new</Badge>}
             </div>
             <p className="mt-1.5 truncate font-semibold text-text group-hover:text-accent">
               {criteriaText}
             </p>
-            {run.criteria.notes && (
-              <p className="mt-1 line-clamp-2 text-xs text-text-muted">{run.criteria.notes}</p>
+            {monitor.criteria.notes && (
+              <p className="mt-1 line-clamp-2 text-xs text-text-muted">{monitor.criteria.notes}</p>
             )}
             <p className="mt-2 text-xs text-text-muted">
-              {run.status === "running" || run.status === "pending"
+              {monitor.status === "running" || monitor.status === "pending"
                 ? "Agent is searching the web…"
-                : run.status === "failed"
-                  ? (run.error ?? "Discovery failed")
-                  : `${visibleCandidates.length} candidate${visibleCandidates.length === 1 ? "" : "s"} found`}
+                : monitor.status === "failed"
+                  ? (monitor.error ?? "Last run failed")
+                  : `${visibleCandidates.length} candidate${visibleCandidates.length === 1 ? "" : "s"} · Last run ${formatWhen(monitor.last_run_at)} · ${monitor.enabled ? formatNextRun(monitor.next_run_at) : "Paused"}`}
             </p>
           </div>
           <svg
@@ -95,7 +114,7 @@ export function DiscoverRunCard({ run, compact, onDelete }: DiscoverRunCardProps
           </svg>
         </div>
       </Link>
-      {onDelete && run.status !== "running" && (
+      {onDelete && monitor.status !== "running" && (
         <div className="mt-1 flex justify-end px-1">
           <button
             type="button"
@@ -112,3 +131,6 @@ export function DiscoverRunCard({ run, compact, onDelete }: DiscoverRunCardProps
     </li>
   );
 }
+
+/** @deprecated use DiscoverMonitorCard */
+export const DiscoverRunCard = DiscoverMonitorCard;

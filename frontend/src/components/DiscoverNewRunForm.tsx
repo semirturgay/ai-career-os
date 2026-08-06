@@ -1,11 +1,19 @@
 import { useState } from "react";
-import type { DiscoveryRemotePreference, DiscoveryRunCreate } from "../types/discovery";
+import type {
+  DiscoveryCreate,
+  DiscoveryDefaultInterval,
+  DiscoveryInterval,
+  DiscoveryRemotePreference,
+} from "../types/discovery";
+import { DISCOVERY_INTERVAL_OPTIONS } from "../types/discovery";
+import { intervalLabel } from "../lib/discoveryIntervals";
 import { Button, Field, Input, Select, Textarea } from "./ui";
 
-interface DiscoverNewRunFormProps {
-  onSubmit: (input: DiscoveryRunCreate) => Promise<void>;
+interface DiscoverNewMonitorFormProps {
+  onSubmit: (input: DiscoveryCreate) => Promise<void>;
   loading?: boolean;
   compact?: boolean;
+  defaultInterval: DiscoveryDefaultInterval;
 }
 
 const REMOTE_OPTIONS: { value: DiscoveryRemotePreference; label: string }[] = [
@@ -15,11 +23,17 @@ const REMOTE_OPTIONS: { value: DiscoveryRemotePreference; label: string }[] = [
   { value: "onsite", label: "On-site only" },
 ];
 
-export function DiscoverNewRunForm({ onSubmit, loading, compact }: DiscoverNewRunFormProps) {
+export function DiscoverNewMonitorForm({
+  onSubmit,
+  loading,
+  compact,
+  defaultInterval,
+}: DiscoverNewMonitorFormProps) {
   const [title, setTitle] = useState("");
   const [country, setCountry] = useState("");
   const [city, setCity] = useState("");
   const [remote, setRemote] = useState<DiscoveryRemotePreference>("any");
+  const [interval, setInterval] = useState<DiscoveryInterval>("default");
   const [notes, setNotes] = useState("");
   const [expanded, setExpanded] = useState(!compact);
 
@@ -34,6 +48,7 @@ export function DiscoverNewRunForm({ onSubmit, loading, compact }: DiscoverNewRu
       country: country.trim() || null,
       city: city.trim() || null,
       remote,
+      interval,
       notes: notes.trim() || null,
     });
 
@@ -41,6 +56,7 @@ export function DiscoverNewRunForm({ onSubmit, loading, compact }: DiscoverNewRu
     setCountry("");
     setCity("");
     setRemote("any");
+    setInterval("default");
     setNotes("");
     if (compact) {
       setExpanded(false);
@@ -73,9 +89,9 @@ export function DiscoverNewRunForm({ onSubmit, loading, compact }: DiscoverNewRu
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-text">Start a discovery</h2>
+          <h2 className="text-sm font-semibold text-text">Create a discovery</h2>
           <p className="mt-0.5 text-xs text-text-muted">
-            Search by role and location. Open promising links, then capture from the page.
+            Saved search that re-runs on a schedule. Open new links and capture from the page.
           </p>
         </div>
         {compact && (
@@ -118,18 +134,35 @@ export function DiscoverNewRunForm({ onSubmit, loading, compact }: DiscoverNewRu
         </Field>
       </div>
 
-      <Field label="Work mode">
-        <Select
-          value={remote}
-          onChange={(event) => setRemote(event.target.value as DiscoveryRemotePreference)}
-        >
-          {REMOTE_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </Select>
-      </Field>
+      <div className={compact ? "space-y-4" : "grid gap-4 sm:grid-cols-2"}>
+        <Field label="Work mode">
+          <Select
+            value={remote}
+            onChange={(event) => setRemote(event.target.value as DiscoveryRemotePreference)}
+          >
+            {REMOTE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+
+        <Field label="Run interval" hint="Uses your Settings default when set to Default">
+          <Select
+            value={interval}
+            onChange={(event) => setInterval(event.target.value as DiscoveryInterval)}
+          >
+            {DISCOVERY_INTERVAL_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.value === "default"
+                  ? intervalLabel("default", defaultInterval)
+                  : option.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      </div>
 
       <Field label="Notes" hint="Optional — stack, seniority, industries to prefer or avoid">
         <Textarea
@@ -141,8 +174,11 @@ export function DiscoverNewRunForm({ onSubmit, loading, compact }: DiscoverNewRu
       </Field>
 
       <Button type="submit" loading={loading} disabled={!title.trim()} className="w-full sm:w-auto">
-        Search for jobs
+        Create & run now
       </Button>
     </form>
   );
 }
+
+/** @deprecated use DiscoverNewMonitorForm */
+export const DiscoverNewRunForm = DiscoverNewMonitorForm;
