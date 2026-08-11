@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AI Career OS",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Explainable job matching in your browser — capture jobs from the page DOM, review, and analyze fit.",
   "permissions": ["activeTab", "storage", "tabs", "scripting", "sidePanel"],
   "host_permissions": [
