@@ -5,8 +5,10 @@ import { useNavigate } from "react-router-dom";
 import {
   formatTabLabel,
   getSidePanelWindowId,
+  queryActiveBrowserTab,
   subscribeActiveBrowserTab,
 } from "../lib/activeBrowserTab";
+import { ensureCapturePermission } from "../lib/capturePermissions";
 import { captureAnimationStore } from "../lib/captureAnimationStore";
 import { runCaptureFromActiveTab } from "../lib/extensionMessaging";
 import { parseExtensionRoute } from "../lib/extensionNavigation";
@@ -41,8 +43,22 @@ export function useCaptureFromActiveTab() {
   const clearError = useCallback(() => setError(null), []);
 
   const capture = useCallback(async () => {
-    setCapturing(true);
     setError(null);
+
+    // Ask for host access before anything else, while we still hold the click gesture
+    // that chrome.permissions.request requires. Doing this ahead of the animation also
+    // means the prompt is not competing with a spinner.
+    try {
+      const tab = await queryActiveBrowserTab(windowId);
+      if (tab) {
+        await ensureCapturePermission(tab.url);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Permission denied");
+      return;
+    }
+
+    setCapturing(true);
     captureAnimationStore.start(tabHint);
     try {
       const result = await runCaptureFromActiveTab(windowId);

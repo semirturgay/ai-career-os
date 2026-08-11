@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo } from "react";
 import { Outlet } from "react-router-dom";
 import { PageLoader } from "./AiLoadingState";
+import { BackendUnreachable } from "./BackendUnreachable";
 import { PipelineSyncProvider } from "../hooks/PipelineSyncContext";
 import { useActiveProfile } from "../hooks/useActiveProfile";
 import type { Profile } from "../types";
@@ -29,13 +30,20 @@ function ProfileRouteShell({
 
 /** Redirects to welcome when no profile; provides profile to nested routes. */
 export function RequireProfileLayout() {
-  const { profile, setProfile, loading, requireProfile } = useActiveProfile();
+  const { profile, setProfile, loading, unreachable, retry, requireProfile } =
+    useActiveProfile();
 
   useEffect(() => {
-    if (!loading && !profile) {
+    // Only send someone to onboarding when the backend actually answered. If it did
+    // not, onboarding cannot succeed and the redirect just hides the real problem.
+    if (!loading && !profile && !unreachable) {
       requireProfile();
     }
-  }, [loading, profile, requireProfile]);
+  }, [loading, profile, unreachable, requireProfile]);
+
+  if (!loading && unreachable) {
+    return <BackendUnreachable onRetry={retry} />;
+  }
 
   if (loading || !profile) {
     return <PageLoader variant="page" />;

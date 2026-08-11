@@ -9,7 +9,8 @@
     "build": "tsc -b && vite build",
     "build:extension": "tsc -b && vite build --config vite.extension.config.ts --mode extension",
     "preview": "vite preview",
-    "generate:api-types": "openapi-typescript http://127.0.0.1:8000/openapi.json -o src/types/api.generated.ts"
+    "generate:api-types": "openapi-typescript http://127.0.0.1:8000/openapi.json -o src/types/api.generated.ts",
+    "package:extension": "bash ../scripts/package-extension.sh"
   },
   "dependencies": {
     "react": "^19.1.0",

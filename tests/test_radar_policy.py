@@ -36,9 +36,35 @@ def test_extension_does_not_request_cookie_access():
         "user's session tokens is exactly what the Radar rewrite removed."
     )
 
-    hosts = " ".join(manifest["host_permissions"]).casefold()
+    # Both keys: a per-site entry is just as much a per-site integration when it is
+    # optional, and optional_host_permissions is the easier place for one to slip in.
+    hosts = " ".join(
+        manifest.get("host_permissions", []) + manifest.get("optional_host_permissions", [])
+    ).casefold()
     for site in ("linkedin", "indeed"):
         assert site not in hosts, f"Per-site host permission for {site} should not exist"
+
+
+def test_extension_declares_store_required_icons():
+    """The Web Store requires a 128px icon, and without one the toolbar shows a puzzle piece."""
+    manifest = json.loads((REPO_ROOT / "extension" / "manifest.json").read_text())
+
+    for size in ("16", "48", "128"):
+        assert size in manifest.get("icons", {}), f"missing {size}px icon"
+
+    for path in manifest["icons"].values():
+        assert (REPO_ROOT / "extension" / path).exists(), f"icon file missing: {path}"
+
+
+def test_install_does_not_request_broad_host_access():
+    """Broad access is requested per site at capture time, not granted at install."""
+    manifest = json.loads((REPO_ROOT / "extension" / "manifest.json").read_text())
+
+    for pattern in manifest.get("host_permissions", []):
+        assert "127.0.0.1" in pattern or "localhost" in pattern, (
+            f"{pattern} is granted at install. Broad host access belongs in "
+            "optional_host_permissions so Chrome prompts for one site at a time."
+        )
 
 
 def test_background_worker_never_reads_cookies():
