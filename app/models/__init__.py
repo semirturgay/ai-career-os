@@ -20,6 +20,8 @@ class Profile(Base):
     headline: Mapped[str | None] = mapped_column(String(500))
     resume_text: Mapped[str] = mapped_column(Text)
     structured_data: Mapped[dict | None] = mapped_column(JSONB, default=None)
+    # Free text: what this person wants Radar to surface. Falls back to `headline`.
+    radar_target: Mapped[str | None] = mapped_column(Text, default=None)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

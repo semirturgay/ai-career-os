@@ -96,3 +96,9 @@ export const EMPTY_CRITERIA: WatchCriteria = {
   remote: "any",
   exclude: [],
 };
+
+export interface RadarTargetResult {
+  radar_target: string | null;
+  cleared_postings: number;
+  repolled_companies: number;
+}

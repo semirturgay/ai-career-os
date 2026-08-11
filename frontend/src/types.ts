@@ -43,6 +43,7 @@ export interface Profile {
   headline: string | null;
   resume_text: string;
   structured_data: Record<string, unknown> | null;
+  radar_target: string | null;
   created_at: string;
   updated_at: string;
 }

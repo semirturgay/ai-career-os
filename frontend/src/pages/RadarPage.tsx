@@ -6,22 +6,25 @@ import { AddCompanyForm } from "../components/AddCompanyForm";
 import { CollapsibleSection } from "../components/CollapsibleSection";
 import { Layout } from "../components/Layout";
 import { PostingFeed } from "../components/PostingFeed";
+import { RadarTargetBar } from "../components/RadarTargetBar";
 import { useProfileRoute } from "../components/RequireProfileLayout";
 import { WatchedCompanyList } from "../components/WatchedCompanyList";
 import { ErrorBanner } from "../components/ui";
+import { api } from "../api/client";
 import { useEmbeddedMode } from "../hooks/useEmbeddedMode";
 import { useRadar } from "../hooks/useRadar";
 import type { ResolvedBoard, WatchedCompany } from "../types/radar";
 
 export function RadarPage() {
   const navigate = useNavigate();
-  const { profile } = useProfileRoute();
+  const { profile, setProfile } = useProfileRoute();
   const embedded = useEmbeddedMode();
   const {
     companies,
     postings,
     loading,
     error,
+    refresh,
     resolve,
     addCompany,
     updateCompany,
@@ -75,6 +78,18 @@ export function RadarPage() {
     [removeCompany],
   );
 
+  const handleSaveTarget = useCallback(
+    async (target: string) => {
+      setActionError(null);
+      const result = await api.radar.setTarget(profile.id, target);
+      setProfile({ ...profile, radar_target: result.radar_target });
+      // The backend clears un-promoted postings and re-polls, so the feed briefly
+      // empties before the fresh, on-target results land.
+      await refresh();
+    },
+    [profile, setProfile, refresh],
+  );
+
   const handlePromote = useCallback(
     async (postingId: string) => {
       setActionError(null);
@@ -111,6 +126,13 @@ export function RadarPage() {
       <div className="space-y-6">
         {error && <ErrorBanner message={error} />}
         {actionError && <ErrorBanner message={actionError} />}
+
+        <RadarTargetBar
+          target={profile.radar_target}
+          headline={profile.headline}
+          compact={embedded}
+          onSave={handleSaveTarget}
+        />
 
         {companies.length === 0 ? (
           <section className="min-w-0 space-y-3">

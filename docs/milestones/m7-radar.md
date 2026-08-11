@@ -22,6 +22,7 @@ scheduler tick (60s)
        → AtsSource.fetch()          Greenhouse | Lever | Ashby — full JSON, keyless
        → Tier 0 criteria filter     free, structural
        → dedupe on (company, external_id)
+       → Tier 0.5 discipline triage LLM over titles only, unseen postings only
        → Tier 1 screen              MatchDepth.SCREEN, capped, sequential
   user clicks "Add to pipeline"
        → structure_job() → Job → run_match_analysis()   Tier 2, existing path
@@ -102,6 +103,29 @@ matching was built and removed for timing out at 10 JDs. Tier 1 uses a small pro
 (`posting_screen.txt`, ~1.5k chars of description), runs one posting at a time, caps at
 `radar_screen_limit_per_poll`, and treats a single failure as non-fatal — the posting stays
 `new` and is retried next poll.
+
+**Discipline triage is semantic, and fails open.** A board is mostly roles for other
+people — Trendyol's Lever board is brand managers, legal counsel, and logistics; Ashby's
+is 40 commercial roles to 19 engineering ones. Without a discipline filter the Tier-1
+budget is spent before reaching anything relevant. Keyword matching cannot do this job:
+`engineer` admits "Sales Engineer" and "Customer Success Engineer" while missing "Backend
+Developer" and "Software Architect". So the decision goes to the LLM, but only over
+titles, batched, and only for postings never seen before — in the steady state a board
+returns nothing new and triage costs nothing.
+
+It fails open on every error path, with one retry first. A job the user wanted must never
+disappear because a call timed out. That property is load-bearing enough that
+`PostingTriageResult.relevant_indices` is deliberately required with no default: a
+defaulted empty list would let a malformed payload validate cleanly and silently mean
+"nothing is relevant", hiding an entire board. Caught in live testing, where a bare `{}`
+from a local model dropped all 59 postings.
+
+**The target lives on the profile, not the company.** You are the same discipline at every
+employer, so per-company targeting would mean re-entering it on every add. Free text
+rather than structured lists, since an LLM reads it: "Senior backend or platform
+engineering, remote in Europe". Falls back to the profile headline when unset. Changing it
+clears un-promoted postings and re-polls, because triage only runs on unseen postings and
+the old off-target ones would otherwise sit in the feed forever.
 
 **Dedupe on the ATS id, not the URL.** `(watched_company_id, external_id)` is a stable
 natural key. URL normalization was always a guess.

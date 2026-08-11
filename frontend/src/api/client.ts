@@ -1,5 +1,5 @@
 import type { ApplicationOutcomeStatus, CompanyBrief, CoverLetterResult, FeedbackEvent, FeedbackEventCreate, Job, JobCreate, JobCreateResponse, JobIntakeHandoff, JobParseResult, MatchAnalysis, Profile, ProfileCreate, ResumeOptimizationResult, ResumeParseResult, ResumeSuggestion } from "../types";
-import type { PollResult, Posting, PostingState, RadarPollInterval, ResolvedBoard, WatchedCompany, WatchedCompanyCreate, WatchedCompanyUpdate } from "../types/radar";
+import type { PollResult, Posting, PostingState, RadarPollInterval, RadarTargetResult, ResolvedBoard, WatchedCompany, WatchedCompanyCreate, WatchedCompanyUpdate } from "../types/radar";
 import type { AppSettings, ListModelsRequest, ModelListResponse, SettingsUpdate } from "../types/settings";
 import { getApiBase } from "../lib/extensionRuntime";
 import {
@@ -260,6 +260,11 @@ export const api = {
     dismissPosting: (profileId: string, postingId: string) =>
       request<Posting>(`/profiles/${profileId}/radar/postings/${postingId}/dismiss`, {
         method: "POST",
+      }),
+    setTarget: (profileId: string, target: string) =>
+      request<RadarTargetResult>(`/profiles/${profileId}/radar/target`, {
+        method: "PUT",
+        body: JSON.stringify({ target }),
       }),
     getPollInterval: () =>
       request<{ radar_poll_interval: RadarPollInterval }>("/settings/radar-poll-interval"),

@@ -60,6 +60,7 @@ export function ProfilePanel({ selectedId, onSelect, onSaved }: ProfilePanelProp
       headline: null,
       resume_text: "",
       structured_data: null,
+      radar_target: null,
       created_at: "",
       updated_at: "",
     });

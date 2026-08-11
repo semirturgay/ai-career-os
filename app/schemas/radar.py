@@ -110,6 +110,22 @@ class PostingRead(BaseModel):
     last_seen_at: datetime
 
 
+class PostingTriageResult(BaseModel):
+    """Which roles in a numbered batch are worth showing this candidate.
+
+    Indices rather than titles, so the model cannot invent a role that was not on
+    the board — the same guard the company-research and screening paths use.
+    """
+
+    # Deliberately required, with no default. If it defaulted to [], a malformed or
+    # unexpected payload would validate cleanly and silently mean "nothing is relevant"
+    # — hiding every job on the board. Absent means broken, so it must raise and let
+    # triage_postings fail open.
+    relevant_indices: list[int] = Field(
+        description="1-based positions of the roles that fit. Empty when none do.",
+    )
+
+
 class PostingScreenResult(BaseModel):
     """LLM structured output for the cheap Tier-1 screen."""
 
@@ -125,9 +141,20 @@ class PollResult(BaseModel):
 
     watched_company_id: uuid.UUID
     fetched: int = 0
+    dropped_by_triage: int = 0
     new_postings: int = 0
     screened: int = 0
     error: str | None = None
+
+
+class RadarTargetUpdate(BaseModel):
+    target: str | None = Field(default=None, max_length=500)
+
+
+class RadarTargetRead(BaseModel):
+    radar_target: str | None
+    cleared_postings: int = 0
+    repolled_companies: int = 0
 
 
 class RadarPollIntervalRead(BaseModel):

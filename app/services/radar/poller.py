@@ -29,6 +29,7 @@ from app.services.llm.base import LLMConfigurationError, LLMError
 from app.services.radar.screener import matches_criteria, screen_postings
 from app.services.radar.sources import AtsBoardNotFoundError, AtsError, get_source
 from app.services.radar.sources.base import RawPosting
+from app.services.radar.triage import triage_postings
 from app.services.settings_service import get_radar_poll_interval
 
 logger = get_logger(__name__)
@@ -104,7 +105,18 @@ async def poll_company(company_id: UUID) -> PollResult:
 
                 criteria = _criteria_of(company)
                 eligible = [item for item in fetched if matches_criteria(item, criteria)]
-                fresh = await _store_postings(db, company, eligible)
+
+                # Triage costs an LLM call, so only ever run it on postings we have not
+                # seen — anything already stored was triaged on an earlier poll. In the
+                # steady state a board returns nothing new and this costs nothing.
+                known_ids = await _known_external_ids(db, company)
+                unseen = [item for item in eligible if item.external_id not in known_ids]
+                relevant = await _triage(db, profile, unseen) if unseen else []
+                result.dropped_by_triage = len(unseen) - len(relevant)
+
+                # Known postings still go through so their last_seen_at is refreshed.
+                to_store = [item for item in eligible if item.external_id in known_ids] + relevant
+                fresh = await _store_postings(db, company, to_store)
                 result.new_postings = len(fresh)
 
                 # Commit the fetch before screening. Screening is the slow, failure-prone
@@ -143,9 +155,10 @@ async def poll_company(company_id: UUID) -> PollResult:
             await db.commit()
 
             logger.info(
-                "Radar poll done: company=%s fetched=%s new=%s screened=%s",
+                "Radar poll done: company=%s fetched=%s off_target=%s new=%s screened=%s",
                 company_id,
                 result.fetched,
+                result.dropped_by_triage,
                 result.new_postings,
                 result.screened,
             )
@@ -203,6 +216,23 @@ async def _store_postings(
 
     await db.flush()
     return fresh
+
+
+async def _known_external_ids(db: AsyncSession, company: WatchedCompany) -> set[str]:
+    result = await db.execute(
+        select(Posting.external_id).where(Posting.watched_company_id == company.id)
+    )
+    return set(result.scalars())
+
+
+async def _triage(db: AsyncSession, profile: Profile, unseen: list[RawPosting]) -> list[RawPosting]:
+    """Semantic discipline filter. Passes everything through if the LLM is unavailable."""
+    try:
+        llm = await get_llm_client(db)
+    except (LLMConfigurationError, LLMError) as exc:
+        logger.info("Triage skipped — LLM unavailable, keeping all %s: %s", len(unseen), exc)
+        return unseen
+    return await triage_postings(llm, profile, unseen)
 
 
 async def _unscreened_postings(db: AsyncSession, company: WatchedCompany) -> list[Posting]:

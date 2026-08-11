@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
-from sqlalchemy import func, nulls_last, select
+from sqlalchemy import delete, func, nulls_last, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,6 +18,8 @@ from app.schemas.api.models import JobRead
 from app.schemas.radar import (
     PollResult,
     PostingRead,
+    RadarTargetRead,
+    RadarTargetUpdate,
     ResolvedBoard,
     ResolveRequest,
     WatchCriteria,
@@ -210,6 +212,64 @@ async def mark_company_viewed(
     await db.commit()
     await db.refresh(company)
     return _to_read(company)
+
+
+@router.put("/profiles/{profile_id}/radar/target", response_model=RadarTargetRead)
+async def set_radar_target(
+    body: RadarTargetUpdate,
+    profile: Profile = Depends(get_profile_or_404),
+    db: AsyncSession = Depends(get_db),
+):
+    """Set what Radar should surface, then rebuild the feed against it.
+
+    Triage only runs on postings we have not seen, so narrowing the target would
+    otherwise leave every previously-stored off-target role sitting in the feed.
+    Un-promoted, un-dismissed postings are cleared and the boards re-polled, which
+    re-triages them under the new target. Promotions and dismissals are decisions the
+    user already made, so those postings survive.
+    """
+    profile.radar_target = (body.target or "").strip() or None
+
+    cleared = await db.execute(
+        delete(Posting).where(
+            Posting.profile_id == profile.id,
+            Posting.state.in_(("new", "screened")),
+        )
+    )
+
+    companies = await db.execute(
+        select(WatchedCompany.id).where(
+            WatchedCompany.profile_id == profile.id,
+            WatchedCompany.status == "active",
+        )
+    )
+    company_ids = list(companies.scalars())
+
+    if company_ids:
+        # Re-poll now rather than waiting for the next scheduled tick.
+        await db.execute(
+            update(WatchedCompany)
+            .where(WatchedCompany.id.in_(company_ids))
+            .values(last_polled_at=None)
+        )
+
+    await db.commit()
+
+    for company_id in company_ids:
+        spawn_poll(company_id)
+
+    cleared_count = cleared.rowcount or 0
+    logger.info(
+        "Radar target set for profile %s — cleared %s posting(s), re-polling %s company(ies)",
+        profile.id,
+        cleared_count,
+        len(company_ids),
+    )
+    return RadarTargetRead(
+        radar_target=profile.radar_target,
+        cleared_postings=cleared_count,
+        repolled_companies=len(company_ids),
+    )
 
 
 # Literal `postings` paths are distinct from the `{company_id}` routes above by segment

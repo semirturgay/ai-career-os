@@ -15,6 +15,7 @@ class ProfileCreate(BaseModel):
     headline: str | None = Field(default=None, max_length=500)
     resume_text: str = Field(min_length=1)
     structured_data: dict | None = None
+    radar_target: str | None = Field(default=None, max_length=500)
 
 
 class ProfileUpdate(BaseModel):
@@ -22,6 +23,7 @@ class ProfileUpdate(BaseModel):
     headline: str | None = Field(default=None, max_length=500)
     resume_text: str | None = Field(default=None, min_length=1)
     structured_data: dict | None = None
+    radar_target: str | None = Field(default=None, max_length=500)
 
 
 class ProfileRead(BaseModel):
@@ -32,6 +34,7 @@ class ProfileRead(BaseModel):
     headline: str | None
     resume_text: str
     structured_data: dict | None
+    radar_target: str | None = None
     created_at: datetime
     updated_at: datetime
 
