@@ -19,9 +19,40 @@ This applies to the Chrome extension, backend job/resume intake, and any future 
 - Proxy services that fetch job pages on the user’s behalf
 - Prefetching job content when the user has not opened that page
 
-## Scope note
+## Scope notes
 
-**Company research** is separate: user-initiated web search for a company brief (not loading the stored job URL). Do not conflate with job intake.
+Two things are deliberately **outside** this policy. Neither is job intake, and neither
+loads a page meant for human eyes.
+
+### Company research
+
+User-initiated web search for a company brief — not loading the stored job URL.
+
+### Radar — public ATS APIs
+
+Radar polls **public JSON endpoints that employers publish so job boards can syndicate their
+listings** (Greenhouse, Lever, Ashby). Reading a syndication API is not scraping a careers
+page. Every rationale behind the rules above still holds:
+
+| Concern | Why it does not apply |
+|---------|----------------------|
+| Brittle per-site scrapers | One documented API per ATS, not per employer. No CSS selectors, no DOM heuristics |
+| Impersonating the user | No cookies, no credentials, no session replay — these endpoints are unauthenticated |
+| Risking the user's account | There is no account involved |
+| Fetching pages meant for humans | These endpoints exist for machines; syndication is their stated purpose |
+
+The line, stated plainly:
+
+> **Agents read what is published for machines. The human reads what needs a login.**
+
+So LinkedIn and Indeed stay fully supported — through **extension capture**, user-driven, on
+a page the user has open. We do not automate them, and we do not export browser sessions to
+act on the user's behalf. A headless-browser version of Radar was built and deleted for
+exactly this reason; see [milestones/m7-radar.md](milestones/m7-radar.md).
+
+Enforcement is mechanical: `tests/test_radar_policy.py` fails if `playwright` or
+`cryptography` return to `pyproject.toml`, if the extension requests the `cookies` permission,
+or if per-site host permissions reappear in the manifest.
 
 ## References
 

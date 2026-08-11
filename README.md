@@ -51,7 +51,7 @@ Built as a learning-friendly codebase for developers who want to understand:
 
 Long-term vision: an autonomous career assistant that discovers jobs, explains fit with evidence, and helps you act — always with transparency. See [docs/vision.md](docs/vision.md).
 
-**Intake policy:** job and resume content is **DOM or paste only** — we never fetch third-party job pages. See [docs/intake-policy.md](docs/intake-policy.md).
+**Intake policy:** job and resume content is **DOM or paste only** — we never fetch third-party job pages. Radar is the one carve-out, and reads only public ATS APIs that employers publish for syndication. See [docs/intake-policy.md](docs/intake-policy.md).
 
 ---
 
@@ -63,7 +63,8 @@ Long-term vision: an autonomous career assistant that discovers jobs, explains f
 - **Model picker** — fetches available models from your provider
 - **Human review** — edit extracted fields before saving (resume and job)
 - **Job intake wizard** — paste description → extract → review → save with automatic match
-- **Chrome extension (M7)** — source-agnostic capture from any page (generic DOM read); backend document classifier routes captures, LLM extracts fields — no per-site heuristics
+- **Chrome extension** — source-agnostic capture from any page (generic DOM read); backend document classifier routes captures, LLM extracts fields — no per-site heuristics
+- **Radar (M7)** — put companies on your radar and we poll their **public ATS boards** (Greenhouse, Lever, Ashby) on a schedule; new postings get a cheap fit score, and one click promotes a posting to a real job with a full match analysis
 - **RAG-backed match** — retrieves relevant resume chunks before full analysis
 - **Job pipeline** — home dashboard ranks jobs by match score with polling
 - **Job detail tabs** — match, company research, resume optimization, cover letter (after full analysis)
@@ -74,7 +75,7 @@ Long-term vision: an autonomous career assistant that discovers jobs, explains f
 - **Export resume PDF** — download your profile as a formatted PDF
 - **Re-analyze** — manual retry on job detail when profile or job changes
 - **Version-controlled prompts** — prompts live in `app/prompts/`, not buried in code
-- **Eval harness** — eight golden suites (resume, job, job capture classification, match, RAG retrieval, optimization, cover letter, research)
+- **Eval harness** — ten golden suites (resume extraction, resume paste, job extraction, job capture classification, match, RAG retrieval, optimization, cover letter, research, posting screen)
 
 ---
 
@@ -104,7 +105,7 @@ flowchart LR
 4. **Job detail** — company research, resume tweaks, cover letter
 5. **Home pipeline** — jobs ranked by score
 
-**Intake policy:** job and resume content is **DOM or paste only** — we never fetch third-party job pages. See [docs/intake-policy.md](docs/intake-policy.md).
+**Intake policy:** job and resume content is **DOM or paste only** — we never fetch third-party job pages. Radar is the one carve-out, and reads only public ATS APIs that employers publish for syndication. See [docs/intake-policy.md](docs/intake-policy.md).
 
 ---
 
@@ -486,6 +487,15 @@ Base path: `/api/v1`
 | POST | `/match-analyses/{id}/cover-letter` | 3-pass cover letter generation |
 | GET | `/match-analyses/{id}` | Get analysis status + result |
 | GET | `/match-analyses` | List analyses |
+| GET | `/profiles/{id}/radar` | List watched companies |
+| POST | `/profiles/{id}/radar/resolve` | Company name or careers URL → candidate ATS board |
+| POST | `/profiles/{id}/radar` | Add a confirmed company to the radar |
+| PATCH | `/profiles/{id}/radar/{cid}` | Pause, resume, or edit criteria |
+| DELETE | `/profiles/{id}/radar/{cid}` | Stop watching a company |
+| POST | `/profiles/{id}/radar/{cid}/poll` | Check a board now |
+| GET | `/profiles/{id}/radar/postings` | Ranked feed of discovered postings |
+| POST | `/profiles/{id}/radar/postings/{pid}/promote` | Promote a posting → job + full match |
+| POST | `/profiles/{id}/radar/postings/{pid}/dismiss` | Dismiss a posting |
 | GET | `/settings` | Get LLM provider config |
 | PUT | `/settings` | Update LLM provider config |
 | POST | `/llm/models` | List models from configured provider |
@@ -506,8 +516,9 @@ Full interactive docs: http://127.0.0.1:8000/docs
 | **M4** Resume optimization | Done | Gap-driven suggestions with review before apply |
 | **M5** Cover letter | Done | 3-pass cover letter chain on job detail |
 | **M6** Company research | Done | Bounded agent loop + web search + source-grounded brief |
-| **M7** Chrome extension | **In progress** | Source-agnostic DOM capture, document classifier + LLM extract, extension-first intake |
-| — | Planned | Re-analyze on job update, production search providers |
+| **M7** Radar | Done | Watch companies; scheduled polling of public ATS APIs, two-tier screening, promote to pipeline |
+| **M8** Memory + feedback | Done | Structured feedback → career memory injected into match, cover letter, and optimization prompts |
+| — | Planned | More ATS providers (Workable, SmartRecruiters), aggregator tier, interview prep |
 
 Details: [docs/milestones/](docs/milestones/README.md) · Current state: [docs/project-status.md](docs/project-status.md)
 
@@ -530,6 +541,7 @@ Details: [docs/milestones/](docs/milestones/README.md) · Current state: [docs/p
 | [docs/vision.md](docs/vision.md) | Long-term product vision |
 | [docs/architecture.md](docs/architecture.md) | System design and data model |
 | [docs/project-status.md](docs/project-status.md) | Current state and what's next |
+| [docs/milestones/m7-radar.md](docs/milestones/m7-radar.md) | **M7 Radar — ATS polling, and why browser scraping was deleted** |
 | [docs/milestones/m6-company-research.md](docs/milestones/m6-company-research.md) | M6 agent loop + company brief |
 | [docs/milestones/m5-progressive-match-cover-letter.md](docs/milestones/m5-progressive-match-cover-letter.md) | Cover letter milestone (historical) |
 | [docs/milestones/m3-match-on-intake.md](docs/milestones/m3-match-on-intake.md) | Match on job save |

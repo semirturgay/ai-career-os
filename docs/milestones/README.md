@@ -13,7 +13,7 @@ Incremental build plan. Each milestone adds one capability and is validated befo
 | 4 | [Resume optimization](m4-resume-optimization.md) | Reflection, iterative refinement | **Done** |
 | 5 | [Progressive match + cover letter](m5-progressive-match-cover-letter.md) | Staged inference, reflection chain | **Done** |
 | 6 | [Company research](m6-company-research.md) | Bounded agent loop, web search | **Done** |
-| 7 | Job discovery | Source-agnostic extension capture (DOM + document classifier), paste resume | **In progress** |
+| 7 | [Radar — company watch](m7-radar.md) | Scheduled polling of public ATS APIs, two-tier screening | **Done** |
 | 8 | [Memory + feedback loop](m8-memory-feedback.md) | Structured feedback, career memory, prompt injection | **Done** |
 | 9 | Interview preparation | Multi-step planning, structured curricula | Planned |
 | 10 | Application automation | Human-in-the-loop, guardrails | Planned |
@@ -25,16 +25,17 @@ Milestones 4–10 are directional. Each depends on eval results from the previou
 | Doc | What it was | Outcome |
 |-----|-------------|---------|
 | [M3 batch matching (archived)](m3-batch-matching.md) | Bulk “Analyze all” with comparative LLM batching | Built, then **removed from product** — see [M3 match on intake](m3-match-on-intake.md) |
+| [M7 browser discovery (archived)](m7-radar.md#the-first-attempt-and-why-it-was-abandoned) | Headless Chromium against LinkedIn/Indeed using exported session cookies | Built, then **deleted before shipping** — replaced by public ATS polling |
 
-## M7 — Browser extension (in progress)
+## M7 — Radar (done)
 
-**Problem:** Users paste jobs one at a time; discovery should happen where they already browse.
+**Problem:** Every job in the pipeline arrives because the user found it. Discovery is the missing half.
 
-**Direction:** Chrome extension reads generic visible text from the **active tab DOM only** — never fetches job URLs, no per-site extractors. Backend LLM classifies (single job posting?) then extracts → review → match. Side panel embeds the app; paste resume is primary onboarding.
+**Direction:** The user puts companies on their radar; we poll each company's **public ATS board** (Greenhouse, Lever, Ashby) on a schedule. Postings arrive with full descriptions, get a cheap Tier-1 screen, and promote to a real `Job` with a full match analysis on one click.
 
-See [extension.md](../extension.md) and [extension/README.md](../../extension/README.md).
+The first attempt scraped LinkedIn and Indeed with a headless browser and exported cookies. It was deleted — see [m7-radar.md](m7-radar.md) for why, and for the alternatives considered.
 
-See [m8-memory-feedback.md](m8-memory-feedback.md) for the active milestone.
+Job **capture** remains the extension's job: source-agnostic DOM read of the active tab. See [extension.md](../extension.md) and [extension/README.md](../../extension/README.md).
 
 ## M8 — Memory + feedback loop (in progress)
 
