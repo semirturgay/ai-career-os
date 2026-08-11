@@ -1,0 +1,6 @@
+{
+  "min_score": 75,
+  "max_score": 100,
+  "must_include_reason_terms": ["python"],
+  "reason_max_chars": 280
+}

@@ -1,0 +1,5 @@
+{
+  "name": "Jane Doe",
+  "headline": "Senior Backend Engineer",
+  "resume_text": "Nine years building Python services. Led the migration of a payments monolith to FastAPI microservices on PostgreSQL, handling 12k requests per second. Deep experience with async Python, SQLAlchemy, and schema design."
+}

@@ -19,12 +19,15 @@ ROOT = Path(__file__).resolve().parents[1]
 
 EVAL_SUITES: dict[str, str] = {
     "resume_extraction": "tests/evals/test_resume_extraction_eval.py",
+    "resume_paste": "tests/evals/test_resume_paste_eval.py",
     "job_extraction": "tests/evals/test_job_extraction_eval.py",
+    "job_capture_classification": "tests/evals/test_job_capture_classification_eval.py",
     "match_analysis": "tests/evals/test_match_analysis_eval.py",
     "resume_optimization": "tests/evals/test_resume_optimization_eval.py",
     "cover_letter": "tests/evals/test_cover_letter_eval.py",
     "company_research": "tests/evals/test_company_research_eval.py",
     "rag_retrieval": "tests/evals/test_rag_retrieval_eval.py",
+    "posting_screen": "tests/evals/test_posting_screen_eval.py",
 }
 
 
