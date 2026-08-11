@@ -1,0 +1,37 @@
+[
+  {
+    "id": "3f2a91c4-77bd-4f0e-9a11-2b8c5d6e7f01",
+    "text": "Staff Frontend Engineer",
+    "hostedUrl": "https://jobs.lever.co/northwind/3f2a91c4-77bd-4f0e-9a11-2b8c5d6e7f01",
+    "applyUrl": "https://jobs.lever.co/northwind/3f2a91c4-77bd-4f0e-9a11-2b8c5d6e7f01/apply",
+    "categories": {
+      "location": "Berlin, Germany",
+      "team": "Engineering",
+      "commitment": "Full-time"
+    },
+    "workplaceType": "hybrid",
+    "descriptionPlain": "We are building the next generation of our design system.",
+    "lists": [
+      {
+        "text": "What you'll do",
+        "content": "<ul><li>Lead frontend architecture</li><li>Mentor engineers</li></ul>"
+      },
+      {
+        "text": "Requirements",
+        "content": "<ul><li>7+ years with React and TypeScript</li></ul>"
+      }
+    ],
+    "additionalPlain": "We offer relocation support and a learning budget.",
+    "createdAt": 1754006400000
+  },
+  {
+    "id": "8c1d40ab-1122-4bcd-9e33-5f6a7b8c9d02",
+    "text": "Site Reliability Engineer",
+    "hostedUrl": "https://jobs.lever.co/northwind/8c1d40ab-1122-4bcd-9e33-5f6a7b8c9d02",
+    "categories": { "location": "Remote - EU", "team": "Infrastructure" },
+    "workplaceType": "remote",
+    "description": "<p>Keep our platform online and fast.</p>",
+    "lists": [],
+    "createdAt": 1754179200000
+  }
+]

@@ -1,0 +1,24 @@
+{
+  "jobs": [
+    {
+      "id": "b17c2e9a-4d55-4c71-8f0a-9e2d3c4b5a60",
+      "title": "Machine Learning Engineer",
+      "location": "San Francisco, CA",
+      "isRemote": false,
+      "employmentType": "FullTime",
+      "publishedAt": "2026-08-05T00:00:00Z",
+      "jobUrl": "https://jobs.ashbyhq.com/orbital/b17c2e9a-4d55-4c71-8f0a-9e2d3c4b5a60",
+      "descriptionPlain": "Train and ship ranking models that power our recommendation surface. You will own evaluation end to end.",
+      "descriptionHtml": "<p>Train and ship ranking models.</p>"
+    },
+    {
+      "id": "c28d3f0b-5e66-4d82-9a1b-0f3e4d5c6b71",
+      "title": "Technical Writer",
+      "location": "Remote - Worldwide",
+      "isRemote": true,
+      "publishedAt": "2026-08-07T00:00:00Z",
+      "jobUrl": "https://jobs.ashbyhq.com/orbital/c28d3f0b-5e66-4d82-9a1b-0f3e4d5c6b71",
+      "descriptionHtml": "<p>Own our developer documentation.</p><ul><li>3+ years writing for engineers</li></ul>"
+    }
+  ]
+}

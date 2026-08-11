@@ -1,0 +1,32 @@
+{
+  "jobs": [
+    {
+      "id": 4012345,
+      "title": "Senior Backend Engineer",
+      "absolute_url": "https://job-boards.greenhouse.io/fintechlabs/jobs/4012345",
+      "location": { "name": "Remote - United States" },
+      "first_published": "2026-07-28T09:00:00-04:00",
+      "updated_at": "2026-08-01T12:00:00-04:00",
+      "content": "&lt;p&gt;We are looking for a Senior Backend Engineer to work on our payments platform.&lt;/p&gt;&lt;h3&gt;Requirements&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;5+ years with Python&lt;/li&gt;&lt;li&gt;Experience with FastAPI or Django&lt;/li&gt;&lt;li&gt;PostgreSQL at scale&lt;/li&gt;&lt;/ul&gt;",
+      "departments": [{ "id": 1, "name": "Engineering" }]
+    },
+    {
+      "id": 4012346,
+      "title": "Product Designer",
+      "absolute_url": "https://job-boards.greenhouse.io/fintechlabs/jobs/4012346",
+      "location": { "name": "New York, NY" },
+      "first_published": "2026-08-03T09:00:00-04:00",
+      "updated_at": "2026-08-03T09:00:00-04:00",
+      "content": "&lt;p&gt;Own the end-to-end design of our merchant dashboard.&lt;/p&gt;",
+      "departments": [{ "id": 2, "name": "Design" }]
+    },
+    {
+      "id": 4012347,
+      "title": "Malformed Posting With No Content",
+      "absolute_url": "https://job-boards.greenhouse.io/fintechlabs/jobs/4012347",
+      "location": { "name": "Remote" },
+      "content": ""
+    }
+  ],
+  "meta": { "total": 3 }
+}
