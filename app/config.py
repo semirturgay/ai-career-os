@@ -46,6 +46,10 @@ class Settings(BaseSettings):
     azure_openai_api_key: str | None = None
     nvidia_api_key: str | None = None
 
+    # Web search providers (optional — every configured provider is merged)
+    tavily_api_key: str | None = None
+    search_include_duckduckgo: bool = True
+
     # JSearch on RapidAPI — required for job discovery (https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch)
     rapidapi_key: str | None = None
 

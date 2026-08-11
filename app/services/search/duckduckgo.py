@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import time
 
@@ -44,8 +46,16 @@ class DuckDuckGoSearchClient:
 
 
 def _search_sync(query: str, max_results: int) -> list[dict]:
+    """Try multiple backends and timelimits — DDG often returns empty on first attempt."""
+    strategies: list[tuple[str, str | None]] = [
+        ("html", "m"),
+        ("lite", "m"),
+        ("html", None),
+        ("auto", None),
+    ]
     last_error: Exception | None = None
-    for backend in SEARCH_BACKENDS:
+
+    for backend, timelimit in strategies:
         try:
             with DDGS() as ddgs:
                 raw = list(
@@ -54,7 +64,7 @@ def _search_sync(query: str, max_results: int) -> list[dict]:
                         max_results=max_results,
                         backend=backend,
                         safesearch="moderate",
-                        timelimit="m",
+                        timelimit=timelimit,
                     )
                 )
             if raw:
@@ -62,6 +72,7 @@ def _search_sync(query: str, max_results: int) -> list[dict]:
         except Exception as exc:
             last_error = exc
             continue
+
     if last_error:
         raise last_error
     return []
