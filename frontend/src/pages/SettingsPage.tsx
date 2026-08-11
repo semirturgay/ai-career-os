@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import { AiLoadingState } from "../components/AiLoadingState";
-import { DiscoverDefaultIntervalSetting } from "../components/DiscoverDefaultIntervalSetting";
+import { RadarPollIntervalSetting } from "../components/RadarPollIntervalSetting";
 import { Layout } from "../components/Layout";
 import { ProviderForm } from "../components/ProviderForm";
 import { Badge } from "../components/ui";
@@ -77,7 +77,7 @@ export function SettingsPage() {
           </>
         )}
 
-        <DiscoverDefaultIntervalSetting />
+        <RadarPollIntervalSetting />
 
         <p className="text-xs text-text-muted">
           Current provider: {PROVIDER_REGISTRY[initialProvider].label}

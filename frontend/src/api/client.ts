@@ -1,5 +1,5 @@
 import type { ApplicationOutcomeStatus, CompanyBrief, CoverLetterResult, FeedbackEvent, FeedbackEventCreate, Job, JobCreate, JobCreateResponse, JobIntakeHandoff, JobParseResult, MatchAnalysis, Profile, ProfileCreate, ResumeOptimizationResult, ResumeParseResult, ResumeSuggestion } from "../types";
-import type { DiscoveryCriteria, DiscoveryDefaultInterval, DiscoveryUpdate, JobDiscovery } from "../types/discovery";
+import type { PollResult, Posting, PostingState, RadarPollInterval, ResolvedBoard, WatchedCompany, WatchedCompanyCreate, WatchedCompanyUpdate } from "../types/radar";
 import type { AppSettings, ListModelsRequest, ModelListResponse, SettingsUpdate } from "../types/settings";
 import { getApiBase } from "../lib/extensionRuntime";
 import {
@@ -210,49 +210,64 @@ export const api = {
       }),
   },
 
-  discover: {
-    list: (profileId: string) => request<JobDiscovery[]>(`/profiles/${profileId}/discoveries`),
-    get: (profileId: string, discoveryId: string) =>
-      request<JobDiscovery>(`/profiles/${profileId}/discoveries/${discoveryId}`),
-    create: (profileId: string, criteria: DiscoveryCriteria & { interval?: string }) =>
-      request<JobDiscovery>(`/profiles/${profileId}/discoveries`, {
+  radar: {
+    listCompanies: (profileId: string) =>
+      request<WatchedCompany[]>(`/profiles/${profileId}/radar`),
+    resolve: (profileId: string, query: string) =>
+      request<ResolvedBoard>(`/profiles/${profileId}/radar/resolve`, {
         method: "POST",
-        body: JSON.stringify(criteria),
+        body: JSON.stringify({ query }),
       }),
-    update: (profileId: string, discoveryId: string, patch: DiscoveryUpdate) =>
-      request<JobDiscovery>(`/profiles/${profileId}/discoveries/${discoveryId}`, {
+    addCompany: (profileId: string, body: WatchedCompanyCreate) =>
+      request<WatchedCompany>(`/profiles/${profileId}/radar`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    updateCompany: (profileId: string, companyId: string, patch: WatchedCompanyUpdate) =>
+      request<WatchedCompany>(`/profiles/${profileId}/radar/${companyId}`, {
         method: "PATCH",
         body: JSON.stringify(patch),
       }),
-    runNow: (profileId: string, discoveryId: string) =>
-      request<JobDiscovery>(`/profiles/${profileId}/discoveries/${discoveryId}/run`, {
-        method: "POST",
-      }),
-    markViewed: (profileId: string, discoveryId: string) =>
-      request<JobDiscovery>(`/profiles/${profileId}/discoveries/${discoveryId}/viewed`, {
-        method: "POST",
-      }),
-    dismissCandidate: (profileId: string, discoveryId: string, candidateId: string) =>
-      request<JobDiscovery>(
-        `/profiles/${profileId}/discoveries/${discoveryId}/candidates/${candidateId}/dismiss`,
-        { method: "POST" },
-      ),
-    delete: (profileId: string, discoveryId: string) =>
-      request<void>(`/profiles/${profileId}/discoveries/${discoveryId}`, {
+    removeCompany: (profileId: string, companyId: string) =>
+      request<void>(`/profiles/${profileId}/radar/${companyId}`, {
         method: "DELETE",
       }),
-    getDefaultInterval: () =>
-      request<{ discovery_default_interval: DiscoveryDefaultInterval }>(
-        "/settings/discovery-default-interval",
-      ),
-    setDefaultInterval: (interval: DiscoveryDefaultInterval) =>
-      request<{ discovery_default_interval: DiscoveryDefaultInterval }>(
-        "/settings/discovery-default-interval",
-        {
-          method: "PUT",
-          body: JSON.stringify({ discovery_default_interval: interval }),
-        },
-      ),
+    poll: (profileId: string, companyId: string) =>
+      request<PollResult>(`/profiles/${profileId}/radar/${companyId}/poll`, {
+        method: "POST",
+      }),
+    markViewed: (profileId: string, companyId: string) =>
+      request<WatchedCompany>(`/profiles/${profileId}/radar/${companyId}/viewed`, {
+        method: "POST",
+      }),
+    listPostings: (
+      profileId: string,
+      options: { state?: PostingState[]; minScore?: number; companyId?: string } = {},
+    ) => {
+      const params = new URLSearchParams();
+      for (const state of options.state ?? []) params.append("state", state);
+      if (options.minScore != null) params.set("min_score", String(options.minScore));
+      if (options.companyId) params.set("company_id", options.companyId);
+      const query = params.toString();
+      return request<Posting[]>(
+        `/profiles/${profileId}/radar/postings${query ? `?${query}` : ""}`,
+      );
+    },
+    promotePosting: (profileId: string, postingId: string) =>
+      request<Job>(`/profiles/${profileId}/radar/postings/${postingId}/promote`, {
+        method: "POST",
+      }),
+    dismissPosting: (profileId: string, postingId: string) =>
+      request<Posting>(`/profiles/${profileId}/radar/postings/${postingId}/dismiss`, {
+        method: "POST",
+      }),
+    getPollInterval: () =>
+      request<{ radar_poll_interval: RadarPollInterval }>("/settings/radar-poll-interval"),
+    setPollInterval: (interval: RadarPollInterval) =>
+      request<{ radar_poll_interval: RadarPollInterval }>("/settings/radar-poll-interval", {
+        method: "PUT",
+        body: JSON.stringify({ radar_poll_interval: interval }),
+      }),
   },
 };
 

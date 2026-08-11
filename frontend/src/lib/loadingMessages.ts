@@ -3,7 +3,7 @@ export type AiLoadingVariant =
   | "resume-extract"
   | "job-extract"
   | "company-research"
-  | "job-discovery"
+  | "radar-poll"
   | "cover-letter"
   | "resume-optimize"
   | "page"
@@ -59,15 +59,14 @@ export const LOADING_CONFIG: Record<AiLoadingVariant, LoadingConfig> = {
     ],
     steps: [{ label: "Search" }, { label: "Refine" }, { label: "Brief" }],
   },
-  "job-discovery": {
-    title: "Searching for jobs",
+  "radar-poll": {
+    title: "Checking careers boards",
     messages: [
-      "Building search queries from your criteria…",
-      "Scanning job boards and career pages…",
-      "Filtering listing pages from blog posts…",
-      "Ranking candidates by profile fit…",
+      "Reading open roles from the board…",
+      "Filtering against your criteria…",
+      "Scoring new postings against your profile…",
     ],
-    steps: [{ label: "Query" }, { label: "Search" }, { label: "Rank" }],
+    steps: [{ label: "Fetch" }, { label: "Filter" }, { label: "Score" }],
   },
   "cover-letter": {
     title: "Writing cover note",

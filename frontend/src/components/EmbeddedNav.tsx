@@ -1,12 +1,21 @@
 import { NavLink } from "react-router-dom";
 
-const discoverIcon = (
+const radarIcon = (
   <svg viewBox="0 0 20 20" fill="currentColor" className="size-5">
     <path
       fillRule="evenodd"
-      d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+      d="M10 1.5a8.5 8.5 0 100 17 8.5 8.5 0 000-17zM3 10a7 7 0 1114 0 7 7 0 01-14 0z"
       clipRule="evenodd"
+      opacity=".5"
     />
+    <path
+      fillRule="evenodd"
+      d="M10 5.5a4.5 4.5 0 100 9 4.5 4.5 0 000-9zM7 10a3 3 0 116 0 3 3 0 01-6 0z"
+      clipRule="evenodd"
+      opacity=".8"
+    />
+    <circle cx="10" cy="10" r="1.4" />
+    <circle cx="14.4" cy="5.6" r="1.7" />
   </svg>
 );
 
@@ -22,9 +31,9 @@ const items = [
     ),
   },
   {
-    to: "/discover",
-    label: "Discover",
-    icon: discoverIcon,
+    to: "/radar",
+    label: "Radar",
+    icon: radarIcon,
   },
   {
     to: "/profile",
