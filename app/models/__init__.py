@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -34,7 +34,11 @@ class Profile(Base):
         back_populates="profile",
         cascade="all, delete-orphan",
     )
-    job_discoveries: Mapped[list["JobDiscovery"]] = relationship(
+    watched_companies: Mapped[list["WatchedCompany"]] = relationship(
+        back_populates="profile",
+        cascade="all, delete-orphan",
+    )
+    postings: Mapped[list["Posting"]] = relationship(
         back_populates="profile",
         cascade="all, delete-orphan",
     )
@@ -130,28 +134,91 @@ class MatchAnalysis(Base):
     job: Mapped["Job"] = relationship(back_populates="match_analyses")
 
 
-class JobDiscovery(Base):
-    """Scheduled job discovery monitor for a profile."""
+class WatchedCompany(Base):
+    """A company on the user's radar — resolved to a public ATS board we poll."""
 
-    __tablename__ = "job_discoveries"
+    __tablename__ = "watched_companies"
+    __table_args__ = (
+        UniqueConstraint(
+            "profile_id",
+            "ats_provider",
+            "ats_token",
+            name="uq_watched_companies_profile_board",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    profile_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("profiles.id"), index=True)
-    criteria: Mapped[dict] = mapped_column(JSONB)
-    interval: Mapped[str] = mapped_column(String(20), default="default")
-    enabled: Mapped[bool] = mapped_column(default=True)
-    status: Mapped[str] = mapped_column(String(20), default="pending", index=True)
-    candidates: Mapped[list] = mapped_column(JSONB, default=list)
-    error: Mapped[str | None] = mapped_column(Text)
-    last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    next_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    profile_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("profiles.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(255))
+    ats_provider: Mapped[str] = mapped_column(String(50))
+    ats_token: Mapped[str] = mapped_column(String(255))
+    board_url: Mapped[str | None] = mapped_column(String(2048))
+    criteria: Mapped[dict | None] = mapped_column(JSONB, default=None)
+    status: Mapped[str] = mapped_column(String(20), default="active", index=True)
+    last_polled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    polling_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_error: Mapped[str | None] = mapped_column(Text)
     last_viewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    profile: Mapped["Profile"] = relationship(back_populates="job_discoveries")
+    profile: Mapped["Profile"] = relationship(back_populates="watched_companies")
+    postings: Mapped[list["Posting"]] = relationship(
+        back_populates="watched_company",
+        cascade="all, delete-orphan",
+    )
+
+
+class Posting(Base):
+    """A role advertised on a watched company's ATS board.
+
+    Staging record, not a shadow ``Job``: it holds the full description so
+    promotion to a real ``Job`` needs no network call. A ``Posting`` is what an
+    ATS advertises; a ``Job`` is what the user commits to.
+    """
+
+    __tablename__ = "postings"
+    __table_args__ = (
+        UniqueConstraint(
+            "watched_company_id",
+            "external_id",
+            name="uq_postings_company_external_id",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    watched_company_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("watched_companies.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("profiles.id", ondelete="CASCADE"), index=True
+    )
+    external_id: Mapped[str] = mapped_column(String(255))
+    url: Mapped[str | None] = mapped_column(String(2048))
+    title: Mapped[str] = mapped_column(String(500))
+    location: Mapped[str | None] = mapped_column(String(255))
+    remote_flag: Mapped[bool] = mapped_column(default=False)
+    description: Mapped[str] = mapped_column(Text)
+    posted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    raw_payload: Mapped[dict | None] = mapped_column(JSONB, default=None)
+    screen_score: Mapped[int | None] = mapped_column(nullable=True)
+    screen_reason: Mapped[str | None] = mapped_column(Text)
+    state: Mapped[str] = mapped_column(String(20), default="new", index=True)
+    job_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("jobs.id"), nullable=True)
+    first_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    last_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    watched_company: Mapped["WatchedCompany"] = relationship(back_populates="postings")
+    profile: Mapped["Profile"] = relationship(back_populates="postings")
+    job: Mapped["Job | None"] = relationship()
 
 
 class AppSettings(Base):
@@ -167,7 +234,7 @@ class AppSettings(Base):
     llm_model: Mapped[str | None] = mapped_column(String(100))
     llm_api_key: Mapped[str | None] = mapped_column(Text)
     llm_base_url: Mapped[str | None] = mapped_column(String(500))
-    discovery_default_interval: Mapped[str] = mapped_column(String(20), default="weekly")
+    radar_poll_interval: Mapped[str] = mapped_column(String(20), default="daily")
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -181,8 +248,9 @@ __all__ = [
     "CareerMemory",
     "FeedbackEvent",
     "Job",
-    "JobDiscovery",
     "MatchAnalysis",
+    "Posting",
     "Profile",
     "ResumeChunkEmbedding",
+    "WatchedCompany",
 ]

@@ -1,9 +1,9 @@
 from pydantic import BaseModel, Field, field_validator
 
-from app.schemas.discovery import DiscoveryDefaultInterval
 from app.schemas.providers import LLMProvider
+from app.schemas.radar import RadarPollInterval
 
-__all__ = ["LLMProvider", "SettingsRead", "SettingsUpdate", "DiscoveryDefaultInterval"]
+__all__ = ["LLMProvider", "RadarPollInterval", "SettingsRead", "SettingsUpdate"]
 
 
 class SettingsRead(BaseModel):
@@ -12,7 +12,7 @@ class SettingsRead(BaseModel):
     llm_base_url: str | None
     api_key_set: bool
     configured: bool
-    discovery_default_interval: DiscoveryDefaultInterval = "weekly"
+    radar_poll_interval: RadarPollInterval = "daily"
 
 
 class SettingsUpdate(BaseModel):

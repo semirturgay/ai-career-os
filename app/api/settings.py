@@ -2,15 +2,15 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.schemas.discovery import (
-    DiscoveryDefaultIntervalRead,
-    DiscoveryDefaultIntervalUpdate,
+from app.schemas.radar import (
+    RadarPollIntervalRead,
+    RadarPollIntervalUpdate,
 )
 from app.schemas.settings import SettingsRead, SettingsUpdate
 from app.services.settings_service import (
-    get_discovery_default_interval,
+    get_radar_poll_interval,
     get_settings_read,
-    set_discovery_default_interval,
+    set_radar_poll_interval,
     upsert_settings,
 )
 
@@ -27,16 +27,16 @@ async def update_settings(body: SettingsUpdate, db: AsyncSession = Depends(get_d
     return await upsert_settings(db, body)
 
 
-@router.get("/discovery-default-interval", response_model=DiscoveryDefaultIntervalRead)
-async def read_discovery_default_interval(db: AsyncSession = Depends(get_db)):
-    interval = await get_discovery_default_interval(db)
-    return DiscoveryDefaultIntervalRead(discovery_default_interval=interval)  # type: ignore[arg-type]
+@router.get("/radar-poll-interval", response_model=RadarPollIntervalRead)
+async def read_radar_poll_interval(db: AsyncSession = Depends(get_db)):
+    interval = await get_radar_poll_interval(db)
+    return RadarPollIntervalRead(radar_poll_interval=interval)  # type: ignore[arg-type]
 
 
-@router.put("/discovery-default-interval", response_model=DiscoveryDefaultIntervalRead)
-async def update_discovery_default_interval(
-    body: DiscoveryDefaultIntervalUpdate,
+@router.put("/radar-poll-interval", response_model=RadarPollIntervalRead)
+async def update_radar_poll_interval(
+    body: RadarPollIntervalUpdate,
     db: AsyncSession = Depends(get_db),
 ):
-    interval = await set_discovery_default_interval(db, body.discovery_default_interval)
-    return DiscoveryDefaultIntervalRead(discovery_default_interval=interval)  # type: ignore[arg-type]
+    interval = await set_radar_poll_interval(db, body.radar_poll_interval)
+    return RadarPollIntervalRead(radar_poll_interval=interval)  # type: ignore[arg-type]

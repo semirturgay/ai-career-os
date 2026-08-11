@@ -14,6 +14,7 @@ from app.schemas.providers import (
     LLMProvider,
     normalize_provider,
 )
+from app.schemas.radar import POLL_INTERVAL_DAYS
 from app.schemas.settings import SettingsRead, SettingsUpdate
 from app.services.llm.urls import normalize_openai_base_url
 
@@ -73,9 +74,9 @@ async def get_settings_read(db: AsyncSession) -> SettingsRead:
     row = await get_settings_row(db)
     provider = normalize_provider(row.llm_provider if row else None)
     env_key = _env_api_key(provider) if provider else None
-    default_interval = row.discovery_default_interval if row else "weekly"
-    if default_interval not in {"daily", "3d", "weekly"}:
-        default_interval = "weekly"
+    poll_interval = row.radar_poll_interval if row else "daily"
+    if poll_interval not in POLL_INTERVAL_DAYS:
+        poll_interval = "daily"
 
     return SettingsRead(
         llm_provider=provider,
@@ -83,7 +84,7 @@ async def get_settings_read(db: AsyncSession) -> SettingsRead:
         llm_base_url=row.llm_base_url if row else None,
         api_key_set=bool(row and row.llm_api_key) or bool(env_key),
         configured=_is_configured(provider, row.llm_api_key if row else None, env_key),
-        discovery_default_interval=default_interval,  # type: ignore[arg-type]
+        radar_poll_interval=poll_interval,  # type: ignore[arg-type]
     )
 
 
@@ -140,24 +141,24 @@ async def get_effective_llm_settings(db: AsyncSession) -> EffectiveLLMSettings |
     )
 
 
-async def get_discovery_default_interval(db: AsyncSession) -> str:
+async def get_radar_poll_interval(db: AsyncSession) -> str:
     row = await get_settings_row(db)
-    interval = row.discovery_default_interval if row else "weekly"
-    if interval not in {"daily", "3d", "weekly"}:
-        return "weekly"
+    interval = row.radar_poll_interval if row else "daily"
+    if interval not in POLL_INTERVAL_DAYS:
+        return "daily"
     return interval
 
 
-async def set_discovery_default_interval(db: AsyncSession, interval: str) -> str:
-    if interval not in {"daily", "3d", "weekly"}:
-        raise SettingsValidationError("discovery_default_interval must be daily, 3d, or weekly")
+async def set_radar_poll_interval(db: AsyncSession, interval: str) -> str:
+    if interval not in POLL_INTERVAL_DAYS:
+        raise SettingsValidationError("radar_poll_interval must be daily, 3d, or weekly")
 
     row = await get_settings_row(db)
     if row is None:
         row = AppSettings(id=1)
         db.add(row)
 
-    row.discovery_default_interval = interval
+    row.radar_poll_interval = interval
     await db.commit()
     await db.refresh(row)
-    return row.discovery_default_interval
+    return row.radar_poll_interval

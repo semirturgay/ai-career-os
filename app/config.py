@@ -2,7 +2,14 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    # extra="ignore" so a stale key in someone's .env (a provider we dropped, a setting
+    # that was renamed) never blocks startup — and so we don't accumulate dead fields
+    # here just to keep old .env files loading.
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     app_name: str = "AI Career OS"
     debug: bool = False
@@ -46,12 +53,15 @@ class Settings(BaseSettings):
     azure_openai_api_key: str | None = None
     nvidia_api_key: str | None = None
 
-    # Web search providers (optional — every configured provider is merged)
+    # Web search providers (optional — company research and Radar board resolution
+    # use every provider that is configured).
     tavily_api_key: str | None = None
     search_include_duckduckgo: bool = True
 
-    # JSearch on RapidAPI — required for job discovery (https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch)
-    rapidapi_key: str | None = None
+    # Radar: how long a claimed poll may run before the reaper reclaims it.
+    radar_stale_claim_minutes: int = 15
+    radar_max_concurrent_polls: int = 4
+    radar_screen_limit_per_poll: int = 20
 
 
 settings = Settings()
