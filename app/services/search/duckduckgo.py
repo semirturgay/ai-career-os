@@ -3,14 +3,18 @@ from __future__ import annotations
 import asyncio
 import time
 
-from duckduckgo_search import DDGS
+from ddgs import DDGS
 
 from app.schemas.company_research import SearchResult
 from app.services.search.base import SearchError
 from app.services.search.tracing import ToolCallTrace, log_tool_call
 
 PROVIDER = "duckduckgo"
-SEARCH_BACKENDS = ("html", "lite", "auto")
+
+# ddgs is a metasearch aggregator, so `backend` names an engine (or a comma-separated
+# set of them), not one of DuckDuckGo's own endpoints. "auto" rotates across all of
+# them; the explicit list is the fallback for when that rotation comes back empty.
+EXPLICIT_ENGINES = "duckduckgo,brave,mojeek"
 
 
 class DuckDuckGoSearchClient:
@@ -46,12 +50,16 @@ class DuckDuckGoSearchClient:
 
 
 def _search_sync(query: str, max_results: int) -> list[dict]:
-    """Try multiple backends and timelimits — DDG often returns empty on first attempt."""
+    """Retry across engines — a first attempt often comes back empty.
+
+    No timelimit. Both callers (company research, and Radar resolving a company to its
+    ATS board) want the authoritative page, which is usually old. Filtering to the last
+    month pushed the real Greenhouse board below job-aggregator spam that republishes
+    listings daily.
+    """
     strategies: list[tuple[str, str | None]] = [
-        ("html", "m"),
-        ("lite", "m"),
-        ("html", None),
         ("auto", None),
+        (EXPLICIT_ENGINES, None),
     ]
     last_error: Exception | None = None
 
