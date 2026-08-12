@@ -3,10 +3,21 @@
 // FORBIDDEN: fetch() to any third-party URL for job/resume content.
 // Job text comes from DOM injection — see docs/intake-policy.md
 
+// Read per request rather than cached at startup: the service worker outlives any
+// single settings change, and a storage read is cheap next to the fetch that follows.
+async function authHeader() {
+  const { apiToken } = await chrome.storage.sync.get({ apiToken: "" });
+  const token = (apiToken || "").trim();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 async function apiRequest(apiBaseUrl, path, options = {}) {
   const headers = new Headers(options.headers || {});
   if (options.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
+  }
+  for (const [name, value] of Object.entries(await authHeader())) {
+    headers.set(name, value);
   }
 
   const response = await fetch(`${apiBaseUrl}/api/v1${path}`, {

@@ -30,19 +30,25 @@ function ProfileRouteShell({
 
 /** Redirects to welcome when no profile; provides profile to nested routes. */
 export function RequireProfileLayout() {
-  const { profile, setProfile, loading, unreachable, retry, requireProfile } =
+  const { profile, setProfile, loading, unreachable, unauthorized, retry, requireProfile } =
     useActiveProfile();
+  const blocked = unreachable || unauthorized;
 
   useEffect(() => {
-    // Only send someone to onboarding when the backend actually answered. If it did
-    // not, onboarding cannot succeed and the redirect just hides the real problem.
-    if (!loading && !profile && !unreachable) {
+    // Only send someone to onboarding when the backend actually answered, and answered
+    // us. Otherwise onboarding cannot succeed and the redirect hides the real problem.
+    if (!loading && !profile && !blocked) {
       requireProfile();
     }
-  }, [loading, profile, unreachable, requireProfile]);
+  }, [loading, profile, blocked, requireProfile]);
 
-  if (!loading && unreachable) {
-    return <BackendUnreachable onRetry={retry} />;
+  if (!loading && blocked) {
+    return (
+      <BackendUnreachable
+        onRetry={retry}
+        reason={unauthorized ? "unauthorized" : "unreachable"}
+      />
+    );
   }
 
   if (loading || !profile) {

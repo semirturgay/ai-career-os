@@ -1,7 +1,7 @@
 import type { ApplicationOutcomeStatus, CompanyBrief, CoverLetterResult, FeedbackEvent, FeedbackEventCreate, Job, JobCreate, JobCreateResponse, JobIntakeHandoff, JobParseResult, MatchAnalysis, Profile, ProfileCreate, ResumeOptimizationResult, ResumeParseResult, ResumeSuggestion } from "../types";
 import type { PollResult, Posting, PostingState, RadarPollInterval, RadarTargetResult, ResolvedBoard, WatchedCompany, WatchedCompanyCreate, WatchedCompanyUpdate } from "../types/radar";
 import type { AppSettings, ListModelsRequest, ModelListResponse, SettingsUpdate } from "../types/settings";
-import { getApiBase } from "../lib/extensionRuntime";
+import { getApiBase, getApiToken } from "../lib/extensionRuntime";
 import {
   duplicateJobFromApiDetail,
   duplicateJobFromErrorMessage,
@@ -31,8 +31,17 @@ function duplicateJobFromError(error: ApiError): DuplicateJobInfo | null {
   return duplicateJobFromErrorMessage(error.message);
 }
 
+/** Empty unless the backend was started with API_TOKEN — see app/api/auth.py. */
+function applyAuth(headers: Headers): Headers {
+  const token = getApiToken();
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  return headers;
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const headers = new Headers(options?.headers);
+  const headers = applyAuth(new Headers(options?.headers));
   if (options?.body && !(options.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
@@ -107,7 +116,9 @@ export const api = {
         body: JSON.stringify({ text }),
       }),
     downloadResumePdf: async (id: string) => {
-      const res = await fetch(`${getApiBase()}/profiles/${id}/resume.pdf`);
+      const res = await fetch(`${getApiBase()}/profiles/${id}/resume.pdf`, {
+        headers: applyAuth(new Headers()),
+      });
       if (!res.ok) {
         let message = res.statusText;
         try {

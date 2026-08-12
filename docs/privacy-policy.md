@@ -21,6 +21,7 @@ backend you run and, if you configure one, to the LLM provider you chose.
 | The page URL | With a capture | Your backend, stored as job metadata and used to detect duplicates |
 | Your resume text and profile | When you upload or paste it | Your backend |
 | Backend API URL | When you set it in Options | `chrome.storage.sync`, so it follows your Chrome profile |
+| Backend API token (optional) | When you set it in Options | `chrome.storage.sync`; sent only to your backend, as an `Authorization` header |
 | Current panel route | As you navigate the side panel | `chrome.storage.session`, cleared when Chrome closes |
 
 The extension makes network requests to exactly one destination: the backend URL you

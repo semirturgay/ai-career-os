@@ -329,11 +329,24 @@ Environment variables (see [`.env.example`](.env.example)). With Docker, copy `.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `DATABASE_URL` | `postgresql+asyncpg://career:career@127.0.0.1:5432/ai_career_os` | Async Postgres connection (overridden in Docker Compose to use the `db` service) |
+| `API_TOKEN` | — | Shared secret required on every API request. Unset = open, which is correct for localhost. **Required before exposing the backend on a public URL** |
 | `OPENAI_API_KEY` | — | Optional fallback if not set in Settings UI |
 | `ANTHROPIC_API_KEY` | — | Optional fallback |
 | Other `*_API_KEY` | — | Provider-specific env fallbacks |
 
 **API keys** entered in the Settings UI are stored server-side in PostgreSQL — never returned to the browser.
+
+### Exposing the backend beyond localhost
+
+By default the network is the security boundary: the API binds locally and anything that can reach it is already on your machine. There are no user accounts — every resource is nested under `/profiles/{id}` and the only check is that the row exists — so an instance on a public URL without a token is a readable **and writable** resume database for anyone who finds the hostname.
+
+Set `API_TOKEN` before that happens:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(32))"   # 24-char minimum, enforced at startup
+```
+
+Then paste the same value into the extension's options page. `/health` stays open so platform health checks keep working. This is a deployment lock for a single operator, not multi-user auth — sharing an instance means sharing one pile of data.
 
 Provider and model selection is persisted in the `app_settings` singleton table.
 

@@ -11,6 +11,9 @@ export function useActiveProfile() {
   // A dead backend and a brand-new install both leave `profile` null. Tracking this
   // separately is what stops us walking someone into onboarding that cannot succeed.
   const [unreachable, setUnreachable] = useState(false);
+  // Same trap, different cause: a backend running with API_TOKEN set answers every
+  // request with 401, which is reachable but just as unusable.
+  const [unauthorized, setUnauthorized] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
@@ -22,6 +25,7 @@ export function useActiveProfile() {
         const profiles = await api.profiles.list();
         if (cancelled) return;
         setUnreachable(false);
+        setUnauthorized(false);
         if (profiles.length === 0) {
           setProfile(null);
           return;
@@ -35,6 +39,7 @@ export function useActiveProfile() {
         // ApiError carries an HTTP status; its absence means the request never landed,
         // i.e. the backend is not running or the API URL is wrong.
         setUnreachable(!(err instanceof ApiError) || err.status === 0);
+        setUnauthorized(err instanceof ApiError && err.status === 401);
         setProfile(null);
       } finally {
         if (!cancelled) setLoading(false);
@@ -57,5 +62,5 @@ export function useActiveProfile() {
     return true;
   }
 
-  return { profile, setProfile, loading, unreachable, retry, requireProfile };
+  return { profile, setProfile, loading, unreachable, unauthorized, retry, requireProfile };
 }

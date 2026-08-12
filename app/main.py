@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.auth import ApiTokenMiddleware
 from app.api.exception_handlers import register_exception_handlers
 from app.api.feedback import router as feedback_router
 from app.api.jobs import router as jobs_router
@@ -46,8 +47,13 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title=settings.app_name, lifespan=lifespan)
 register_exception_handlers(app)
+# add_middleware prepends, so the last one added is the outermost. The gate goes on
+# first — innermost — so a rejected request still gets an access-log line with its 401.
+app.add_middleware(ApiTokenMiddleware, token=settings.api_token)
 app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(RequestIdMiddleware)
+# Added last, so CORS is the outermost layer: preflights are answered before the token
+# gate sees them, and a 401 still carries the headers the browser needs to read it.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
