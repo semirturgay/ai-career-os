@@ -1,14 +1,36 @@
 from __future__ import annotations
 
 from app.config import settings
+from app.logging_config import get_logger
 from app.schemas.document_classifier import DocumentClassification, DocumentLabel
 from app.services.capture_text_normalization import prepare_capture_text_for_classification
 from app.services.document_classifier.chunking import chunk_text_for_classification
 from app.services.document_classifier.classifier import (
+    CLASSIFIER_EXTRA,
     DocumentClassifierProvider,
     get_document_classifier,
 )
 from app.services.document_classifier.tuning_log import log_classifier_prediction
+
+logger = get_logger(__name__)
+
+_warned_not_installed = False
+
+
+def _warn_classifier_not_installed() -> None:
+    """Say it once. Every capture would otherwise repeat the same line forever."""
+    global _warned_not_installed
+    if _warned_not_installed:
+        return
+    _warned_not_installed = True
+    logger.warning(
+        "Document classifier is enabled but the optional `%s` extra is not installed — "
+        "captures will be accepted without the is-this-a-job-post pre-filter. "
+        "Install it with `uv sync --extra %s`, or set DOCUMENT_CLASSIFIER_ENABLED=false "
+        "to silence this.",
+        CLASSIFIER_EXTRA,
+        CLASSIFIER_EXTRA,
+    )
 
 
 def _empty_classification() -> DocumentClassification:
@@ -114,6 +136,11 @@ def classify_page_text(
         return None
 
     active_classifier = classifier or get_document_classifier()
+    if active_classifier is None:
+        _warn_classifier_not_installed()
+        log_classifier_prediction(normalized, "skipped:not-installed")
+        return None
+
     chunks = chunk_text_for_classification(
         normalized,
         chunk_size=settings.document_classifier_chunk_size,

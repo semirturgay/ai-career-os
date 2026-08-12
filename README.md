@@ -120,7 +120,7 @@ flowchart LR
 | Validation | Pydantic v2 |
 | PDF | pypdf |
 | LLM client | httpx (OpenAI-compatible + structured output) |
-| Job capture classifier | [`smr123/resume-job-classifier`](https://huggingface.co/smr123/resume-job-classifier) via Hugging Face `transformers` (local, server-side) |
+| Job capture classifier | [`smr123/resume-job-classifier`](https://huggingface.co/smr123/resume-job-classifier) via Hugging Face `transformers` (local, server-side — [optional extra](#job-capture-classifier)) |
 | Frontend | Vite, React, TypeScript, Tailwind CSS |
 | Extension | Chrome Manifest V3 (source-agnostic DOM capture, side panel) |
 | Package managers | [uv](https://docs.astral.sh/uv/) (Python), [Bun](https://bun.sh) (frontend) |
@@ -310,6 +310,15 @@ visible page text
 ```
 
 The model runs **on the backend** at classify time (first request downloads weights from Hugging Face). Tunable via `document_classifier_*` settings in [`app/config.py`](app/config.py). Predictions can append to `data/classifier_tuning_log.csv` for offline eval.
+
+**It's an optional extra.** `torch` and `transformers` are ~613MB of a ~930MB environment — the single biggest thing standing between this project and a small deployable image (216MB without them). So they are not installed by default:
+
+```bash
+uv sync --extra classifier                              # local dev, with the filter
+docker build --build-arg INCLUDE_CLASSIFIER=true .      # image, with the filter
+```
+
+Without it, captures skip the pre-filter and go straight to LLM extraction — the classifier **fails open**, exactly as it does when `DOCUMENT_CLASSIFIER_ENABLED=false`. You lose the "this isn't a job posting" guard rail, not the ability to capture. The backend logs one warning at first capture to say so.
 
 ### Extension API calls (our backend only)
 

@@ -10,8 +10,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends fonts-dejavu-co
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy
 
+# The local document classifier needs torch, which roughly triples the image. It is a
+# pre-capture filter that fails open, so it is opt-in:
+#   docker build --build-arg INCLUDE_CLASSIFIER=true .
+ARG INCLUDE_CLASSIFIER=false
+
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-dev --no-install-project
+# The cache mount keeps uv's downloads out of the layer — they were adding ~300MB of
+# wheels to the image on top of the venv they were used to build — while still making
+# rebuilds fast.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    if [ "$INCLUDE_CLASSIFIER" = "true" ]; then \
+      uv sync --frozen --no-dev --no-install-project --extra classifier; \
+    else \
+      uv sync --frozen --no-dev --no-install-project; \
+    fi
 
 COPY app ./app
 COPY alembic ./alembic

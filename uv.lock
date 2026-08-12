@@ -26,9 +26,13 @@ dependencies = [
     { name = "pypdf" },
     { name = "python-multipart" },
     { name = "sqlalchemy", extra = ["asyncio"] },
+    { name = "uvicorn", extra = ["standard"] },
+]
+
+[package.optional-dependencies]
+classifier = [
     { name = "torch" },
     { name = "transformers" },
-    { name = "uvicorn", extra = ["standard"] },
 ]
 
 [package.dev-dependencies]
@@ -56,10 +60,11 @@ requires-dist = [
     { name = "pypdf", specifier = ">=5.1.0" },
     { name = "python-multipart", specifier = ">=0.0.17" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.36" },
-    { name = "torch", specifier = ">=2.13.0" },
-    { name = "transformers", specifier = ">=5.14.1" },
+    { name = "torch", marker = "extra == 'classifier'", specifier = ">=2.13.0" },
+    { name = "transformers", marker = "extra == 'classifier'", specifier = ">=5.14.1" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.32.0" },
 ]
+provides-extras = ["classifier"]
 
 [package.metadata.requires-dev]
 dev = [

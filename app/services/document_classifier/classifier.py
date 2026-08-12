@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import threading
+from functools import lru_cache
+from importlib.util import find_spec
 from typing import Any, Protocol
 
 from app.config import settings
@@ -8,6 +10,22 @@ from app.logging_config import get_logger
 from app.schemas.document_classifier import DocumentClassification, DocumentLabel
 
 logger = get_logger(__name__)
+
+# torch + transformers dominate the install (~613MB of ~930MB), so they live behind the
+# `classifier` extra. Everything downstream treats their absence as "no opinion", which
+# is the same path `document_classifier_enabled = False` already took.
+CLASSIFIER_EXTRA = "classifier"
+_CLASSIFIER_REQUIREMENTS = ("transformers", "torch")
+
+
+@lru_cache(maxsize=1)
+def classifier_dependencies_installed() -> bool:
+    """True when the optional extra is present.
+
+    find_spec avoids importing transformers, which would drag torch into memory just to
+    answer the question — the exact cost this check exists to avoid paying.
+    """
+    return all(find_spec(name) is not None for name in _CLASSIFIER_REQUIREMENTS)
 
 
 class DocumentClassifierProvider(Protocol):
@@ -68,8 +86,15 @@ class HuggingFaceDocumentClassifier:
 _default_classifier: DocumentClassifierProvider | None = None
 
 
-def get_document_classifier() -> DocumentClassifierProvider:
+def get_document_classifier() -> DocumentClassifierProvider | None:
+    """The shared classifier, or None when the `classifier` extra is not installed.
+
+    None is a supported answer, not an error: callers skip classification and let the
+    capture through, which is what happens today when the classifier is turned off.
+    """
     global _default_classifier
+    if not classifier_dependencies_installed():
+        return None
     if _default_classifier is None:
         _default_classifier = HuggingFaceDocumentClassifier()
     return _default_classifier
