@@ -7,7 +7,26 @@ import { IS_EXTENSION } from "../lib/extensionRuntime";
 import { Button } from "./ui";
 
 const COLLAPSED_WIDTH = "6rem";
-const DOCK_BOTTOM = "calc(4.75rem + env(safe-area-inset-bottom, 0px))";
+
+/** Clears the bottom nav (3.25rem) with room to breathe. */
+const DOCK_OFFSET_REM = 4.75;
+const DOCK_BOTTOM = `calc(${DOCK_OFFSET_REM}rem + env(safe-area-inset-bottom, 0px))`;
+
+/**
+ * Tallest the dock ever gets: hint row (~1.625rem) + button row (0.375 + 2.25rem).
+ * It collapses to ~3rem, but reserving for the expanded state is what stops the last
+ * row of a list from sitting under it.
+ */
+const DOCK_MAX_HEIGHT_REM = 4.25;
+
+/**
+ * How much bottom padding a scrolling page owes the dock. Exported so Layout cannot
+ * drift from the dock's real footprint — it previously reserved 7.5rem, which the
+ * collapsed dock already exceeded by a hair and the expanded one cleared entirely.
+ */
+export const CAPTURE_DOCK_RESERVED_SPACE = `calc(${
+  DOCK_OFFSET_REM + DOCK_MAX_HEIGHT_REM + 0.5
+}rem + env(safe-area-inset-bottom, 0px))`;
 
 function CaptureIcon({ className }: { className?: string }) {
   return (

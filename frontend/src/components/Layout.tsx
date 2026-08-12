@@ -1,6 +1,6 @@
 import { Sidebar } from "./Sidebar";
 import { EmbeddedNav } from "./EmbeddedNav";
-import { FloatingCaptureDock } from "./FloatingCaptureDock";
+import { CAPTURE_DOCK_RESERVED_SPACE, FloatingCaptureDock } from "./FloatingCaptureDock";
 import { PageBackNav } from "./PageBackNav";
 import { GlobalTaskIndicator } from "./GlobalTaskIndicator";
 import { useEmbeddedMode } from "../hooks/useEmbeddedMode";
@@ -32,11 +32,12 @@ export function Layout({
   if (embedded) {
     return (
       <div
-        className={`flex min-h-screen flex-col overflow-x-clip bg-surface ${
-          captureDock
-            ? "pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))]"
-            : "pb-[calc(3.25rem+env(safe-area-inset-bottom,0px))]"
-        }`}
+        className="flex min-h-screen flex-col overflow-x-clip bg-surface"
+        style={{
+          paddingBottom: captureDock
+            ? CAPTURE_DOCK_RESERVED_SPACE
+            : "calc(3.25rem + env(safe-area-inset-bottom, 0px))",
+        }}
       >
         {backTo && (
           <div className="sticky top-0 z-50 border-b border-border bg-surface/95 px-3 py-2 backdrop-blur-sm">
