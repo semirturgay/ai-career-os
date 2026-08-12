@@ -10,8 +10,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends fonts-dejavu-co
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy
 
-# The local document classifier needs torch, which roughly triples the image. It is a
-# pre-capture filter that fails open, so it is opt-in:
+# The local document classifier needs torch: 722MB image without it, 1.89GB with. It is
+# a pre-capture filter that fails open, so it is opt-in:
 #   docker build --build-arg INCLUDE_CLASSIFIER=true .
 ARG INCLUDE_CLASSIFIER=false
 

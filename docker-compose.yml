@@ -19,9 +19,9 @@ services:
     build:
       context: .
       args:
-        # The local job-capture classifier needs torch, which roughly triples the
-        # image (~400MB → ~1.1GB). It fails open when absent, so it is off by default.
-        # Flip to "true" and rebuild to get the is-this-a-job-post pre-filter.
+        # The local job-capture classifier needs torch: 722MB image without it, 1.89GB
+        # with. It fails open when absent, so it is off by default. Flip to "true" and
+        # rebuild to get the is-this-a-job-post pre-filter.
         INCLUDE_CLASSIFIER: "false"
     ports:
       - "8000:8000"

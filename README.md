@@ -311,7 +311,14 @@ visible page text
 
 The model runs **on the backend** at classify time (first request downloads weights from Hugging Face). Tunable via `document_classifier_*` settings in [`app/config.py`](app/config.py). Predictions can append to `data/classifier_tuning_log.csv` for offline eval.
 
-**It's an optional extra.** `torch` and `transformers` are ~613MB of a ~930MB environment — the single biggest thing standing between this project and a small deployable image (216MB without them). So they are not installed by default:
+**It's an optional extra.** `torch` is by far the largest thing this project can install, so it is not installed by default. Measured Linux image sizes:
+
+| Build | Size |
+|---|---|
+| Default (no classifier) | **722MB** |
+| `--build-arg INCLUDE_CLASSIFIER=true` | **1.89GB** |
+
+Enable it with:
 
 ```bash
 uv sync --extra classifier                              # local dev, with the filter
@@ -319,6 +326,8 @@ docker build --build-arg INCLUDE_CLASSIFIER=true .      # image, with the filter
 ```
 
 Without it, captures skip the pre-filter and go straight to LLM extraction — the classifier **fails open**, exactly as it does when `DOCUMENT_CLASSIFIER_ENABLED=false`. You lose the "this isn't a job posting" guard rail, not the ability to capture. The backend logs one warning at first capture to say so.
+
+On Linux, `torch` is pinned to PyPI's CPU wheel. The stock wheel bundles the CUDA toolchain — 2.9GB of `nvidia` libraries plus 652MB of `triton`, taking the image to 8.6GB — for a 512-token DistilBERT that runs in ~8ms on CPU and never touches a GPU. macOS and Windows wheels are already CPU-only, so the pin is scoped to Linux.
 
 ### Extension API calls (our backend only)
 

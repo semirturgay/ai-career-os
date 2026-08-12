@@ -62,6 +62,25 @@ def test_classifier_extra_still_declares_what_it_needs():
         assert package in extra, f"the classifier extra must install {package}"
 
 
+def test_torch_is_pinned_to_the_cpu_wheel_on_linux():
+    """Guards an 8GB regression.
+
+    PyPI's Linux torch wheel bundles the CUDA toolchain — 2.9GB of nvidia libraries and
+    652MB of triton — which took the classifier image to 8.61GB. Nothing here uses a
+    GPU. Losing this pin would not fail any other test; it would just quietly make the
+    image ten times bigger.
+    """
+    pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text())
+    sources = pyproject["tool"]["uv"]["sources"]["torch"]
+    linux = [s for s in sources if "linux" in s.get("marker", "")]
+
+    assert linux, "torch must be pinned to a CPU index on Linux"
+    assert linux[0]["index"] == "pytorch-cpu"
+
+    indexes = {i["name"]: i["url"] for i in pyproject["tool"]["uv"]["index"]}
+    assert "cpu" in indexes["pytorch-cpu"]
+
+
 def test_get_document_classifier_returns_none_when_not_installed(classifier_not_installed):
     assert classifier_module.get_document_classifier() is None
 

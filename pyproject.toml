@@ -23,10 +23,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# The local document classifier (smr123/resume-job-classifier) needs a full torch
-# install: torch, transformers and sympy together are ~613MB of a ~930MB environment,
-# for a pre-capture filter that fails open when absent. Keeping it out of the base
-# install is what makes the image small enough to deploy on a free tier.
+# The local document classifier (smr123/resume-job-classifier) needs torch, which is by
+# far the largest thing this project can install — for a pre-capture filter that fails
+# open when absent. Keeping it out of the base install is what makes the image small
+# enough to deploy anywhere normal.
 #
 #   uv sync --extra classifier          # local dev, with the filter
 #   docker build --build-arg INCLUDE_CLASSIFIER=true .
@@ -34,6 +34,19 @@ classifier = [
     "transformers>=5.14.1",
     "torch>=2.13.0",
 ]
+
+# On Linux, PyPI's torch wheel bundles the whole CUDA toolchain: 2.9GB of nvidia
+# libraries and 652MB of triton, which took the classifier image to 8.61GB. The model
+# is a 512-token DistilBERT that classifies in ~8ms on CPU and never touches a GPU, so
+# the CPU wheel is not a downgrade — it is the build we were always actually running.
+# Scoped to Linux because macOS and Windows wheels are CPU-only on PyPI already.
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [dependency-groups]
 dev = [
